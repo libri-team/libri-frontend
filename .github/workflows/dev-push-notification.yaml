@@ -1,4 +1,4 @@
-name: Dev Branch Push Notification
+name: Dev Branch Deployment Status
 
 on:
   push:
@@ -6,14 +6,19 @@ on:
       - dev
 
 jobs:
-  notify:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+            
+      - name: Deploy Step
+        run: |
+          echo "배포 명령어"
         
-      - name: Send Slack Notification
+      - name: Send Slack Notification on Success
+        if: success()
         uses: 8398a7/action-slack@v3
         with:
           status: custom
@@ -22,7 +27,27 @@ jobs:
             {
               attachments: [{
                 color: 'good',
-                text: `🔔 새로운 Push 알림\n*Repository:* ${process.env.AS_REPO}\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n*이벤트:* ${process.env.AS_EVENT_NAME}`,
+                title: '✅ 배포 성공',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n배포가 성공적으로 완료되었습니다! 🎉`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+      - name: Send Slack Notification on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'danger',
+                title: '❌ 배포 실패',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n⚠️ 배포 중 오류가 발생했습니다.\n확인이 필요합니다!`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
               }]
             }
         env:
