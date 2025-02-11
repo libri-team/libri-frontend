@@ -1,0 +1,30 @@
+name: Dev Branch Push Notification
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Send Slack Notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'good',
+                text: `🔔 새로운 Push 알림\n*Repository:* ${process.env.AS_REPO}\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n*이벤트:* ${process.env.AS_EVENT_NAME}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
