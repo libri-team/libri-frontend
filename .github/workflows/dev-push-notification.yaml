@@ -8,7 +8,7 @@ on:
 
 env:
   DOCKER_REGISTRY: ${{ secrets.NCP_CONTAINER_REGISTRY }}
-  NEXT_APP_NAME: libri-web
+  NEXT_APP_NAME: libri-frontend
   NEXT_APP_VERSION: ${{ github.sha }}
 
 permissions:
