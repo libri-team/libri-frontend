@@ -122,7 +122,10 @@ jobs:
           script: |
             cd /app/libri-web
             
-            echo "${{ secrets.NCP_ACCESS_KEY }}" | docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u "${{ secrets.NCP_ACCESS_KEY }}" --password-stdin
+            docker logout
+            
+            # NCP Container Registry 로그인
+            echo "${{ secrets.NCP_SECRET_KEY }}" | docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u "${{ secrets.NCP_ACCESS_KEY }}" --password-stdin
             
             docker-compose -f docker-compose.yml ps -q > previous_containers.txt
             
