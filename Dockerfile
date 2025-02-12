@@ -16,6 +16,8 @@ COPY yarn.lock ./
 COPY .yarnrc.yml ./
 COPY .pnp.* ./
 
+RUN yarn install --frozen-lockfile
+
 # 보안 설정
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
