@@ -1,21 +1,159 @@
-name: Dev Branch Deployment Status
+name: Deploy Next.js to Dev Environment
 
 on:
   push:
     branches:
       - dev
 
+
+env:
+  DOCKER_REGISTRY: ${{ secrets.NCP_CONTAINER_REGISTRY }}
+  NEXT_APP_NAME: libri-web
+  NEXT_APP_VERSION: ${{ github.sha }}
+
+permissions:
+  contents: read
+  packages: write
+  
 jobs:
-  deploy:
+  build-and-push:
+    name: Build and Push Next.js Docker Image
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-            
-      - name: Deploy Step
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to NCP Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.NCP_CONTAINER_REGISTRY }}
+          username: ${{ secrets.NCP_ACCESS_KEY }}
+          password: ${{ secrets.NCP_SECRET_KEY }}
+
+      - name: Build and push Next.js Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.NEXT_APP_NAME }}:${{ env.NEXT_APP_VERSION }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.NEXT_APP_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Dev Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create deployment directory
         run: |
-          echo "배포 명령어"
+          mkdir -p deploy
+          cp docker-compose.yml deploy/
+
+      - name: Create .env file
+        run: |
+          cat << EOF > deploy/.env
+          # Docker Registry
+          DOCKER_REGISTRY=${{ secrets.NCP_CONTAINER_REGISTRY }}
+          NEXT_APP_NAME=${{ env.NEXT_APP_NAME }}
+          
+          # Next.js 환경변수
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          EOF
+
+      - name: Update docker-compose.yml with new image tag
+        run: |
+          sed -i "s|image: \${DOCKER_REGISTRY}/\${NEXT_APP_NAME}:.*|image: ${{ env.DOCKER_REGISTRY }}/${{ env.NEXT_APP_NAME }}:${{ env.NEXT_APP_VERSION }}|g" deploy/docker-compose.yml
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.NCP_SERVER_HOST }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          source: "deploy/*"
+          target: "/app/libri-web"
+          strip_components: 1
+          overwrite: true
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.NCP_SERVER_HOST }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          script: |
+            cd /app/libri-web
+            
+            echo "${{ secrets.NCP_ACCESS_KEY }}" | docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u "${{ secrets.NCP_ACCESS_KEY }}" --password-stdin
+            
+            docker-compose -f docker-compose.yml ps -q > previous_containers.txt
+            
+            docker-compose pull
+            
+            docker-compose down --remove-orphans
+            docker-compose up -d
+            
+            echo "Waiting for containers to be healthy..."
+            sleep 30
+            
+            if docker-compose ps | grep -q "unhealthy"; then
+              echo "Container health check failed. Rolling back..."
+              docker-compose down
+              while read container; do
+                docker start $container
+              done < previous_containers.txt
+              exit 1
+            else
+              echo "Deployment successful!"
+              rm previous_containers.txt
+              docker image prune -af
+            fi
+
+      - name: Verify Deployment
+        if: success()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.NCP_SERVER_HOST }}
+          username: ${{ secrets.NCP_SERVER_USER }}
+          key: ${{ secrets.NCP_SERVER_SSH_KEY }}
+          script: |
+            cd /app/libri-web
+            echo "Checking container status..."
+            docker-compose ps
+            echo "Checking application logs..."
+            docker-compose logs --tail=100 web
+
+      - name: Notify Deployment Status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "Deployment completed successfully!"
+          else
+            echo "Deployment failed!"
+            exit 1
+          fi
         
       - name: Send Slack Notification on Success
         if: success()
