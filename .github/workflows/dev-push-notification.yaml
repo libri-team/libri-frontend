@@ -85,7 +85,7 @@ jobs:
       - name: Create deployment directory
         run: |
           mkdir -p deploy
-          cp ./docker/compose/docker-compose.yml deploy/
+          cp docker-compose.yml deploy/
 
       - name: Create .env file
         run: |
