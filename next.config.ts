@@ -1,7 +1,7 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = { transpilePackages: ['@radix-ui/react-dialog'] };
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:
@@ -42,3 +42,4 @@ export default withSentryConfig(nextConfig, {
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
 });
+module.exports = nextConfig;
