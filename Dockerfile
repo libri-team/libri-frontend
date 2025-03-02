@@ -8,22 +8,20 @@ RUN apk add --no-cache libc6-compat && \
     corepack prepare yarn@4.6.0 --activate
 # 소스 파일 복사
 COPY . .
-# 빌드 시 환경변수 설정
-ARG NEXT_PUBLIC_API_URL
-ARG GOOGLE_CLIENT_ID
-ARG GOOGLE_CLIENT_SECRET
-ARG NEXTAUTH_SECRET
 
+# 빌드 시 환경변수 설정 (공개 변수만)
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-ENV GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
 
 # 의존성 설치 및 빌드
 RUN yarn install --immutable
-RUN echo "Building with environment variables set"
-RUN yarn build || (echo "Build failed. Check logs above for details." && exit 1)
+# 빌드 환경 설정 (프로덕션용 더미 변수로 빌드)
+RUN echo "GOOGLE_CLIENT_ID=dummy-for-build-time" > .env.production
+RUN echo "GOOGLE_CLIENT_SECRET=dummy-for-build-time" >> .env.production
+RUN echo "NEXTAUTH_SECRET=dummy-for-build-time" >> .env.production
 
+RUN yarn build
 
 # 프로덕션 스테이지
 FROM node:20-alpine
