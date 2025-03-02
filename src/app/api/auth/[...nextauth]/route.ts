@@ -9,6 +9,22 @@ const handler = NextAuth(
       clientSecret: process.env.NAVER_CLIENT_SECRET as string,
     }),
   ],
+  pages: {
+    signIn: '/',
+    signOut: '/',
+    error: '/error',
+    verifyRequest: '/',
+    newUser: '/mylibrary'
+  },
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("http") && !url.startsWith(baseUrl)) 
+        return baseUrl;
+      if (url.startsWith("/")) 
+        return `${baseUrl}${url}`;
+      return baseUrl;
+    }
+  }
 }
 );
 
