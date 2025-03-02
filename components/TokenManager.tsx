@@ -56,7 +56,7 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
-  const [storedToken, setStoredToken] = useState<string | null>(null);
+  const [, setStoredToken] = useState<string | null>(null);
 
   // Check for token in localStorage on component mount
   useEffect(() => {
@@ -128,69 +128,10 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
     }
   };
 
-  // Delete token
-  const handleClearToken = (): void => {
-    localStorage.removeItem('accessToken');
-    setStoredToken(null);
-    console.log('로컬 스토리지에서 토큰이 삭제되었습니다.');
-
-    // Notify parent component
-    if (onTokenSet) {
-      onTokenSet(null);
-    }
-  };
-
-  // Copy token to clipboard
-  const handleCopyToken = (): void => {
-    if (storedToken) {
-      navigator.clipboard
-        .writeText(storedToken)
-        .then(() => {
-          console.log('토큰이 클립보드에 복사되었습니다.');
-          alert('토큰이 클립보드에 복사되었습니다.');
-        })
-        .catch((err: unknown) => {
-          console.error('클립보드 복사 실패:', err);
-          alert('클립보드 복사 실패');
-        });
-    }
-  };
-
   return (
-    <div className="w-full p-6 bg-white shadow-md rounded-lg">
-      <h2 className="text-xl font-bold mb-4">아이디 만들기</h2>
-
-      {/* Display current token */}
-      {storedToken ? (
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-medium text-gray-700">현재 토큰:</h3>
-            <div className="space-x-2">
-              <button
-                onClick={handleCopyToken}
-                className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
-              >
-                복사
-              </button>
-              <button
-                onClick={handleClearToken}
-                className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-          <div className="bg-gray-100 p-2 rounded text-xs break-all">{storedToken}</div>
-        </div>
-      ) : (
-        <div className="mb-4 text-orange-500 text-sm">
-          저장된 토큰이 없습니다. 토큰을 생성하거나 입력해주세요.
-        </div>
-      )}
-
+    <div className="w-full p-6 ">
       {/* Test ID generation */}
       <div className="mb-4">
-        <h3 className="font-medium text-gray-700 mb-2">테스트 아이디 생성</h3>
         <div className="flex space-x-2">
           <input
             type="email"

@@ -2,17 +2,199 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import Navigation from '@/components/Navigation';
+// import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+
+interface NavigationProps {
+  isDrawerOpen?: boolean;
+  nickname?: string | null; // 닉네임 prop 추가
+}
+
+import { Bell } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
+
+const Navigation = ({ isDrawerOpen }: NavigationProps) => {
+  const pathname = usePathname();
+  const [nickname, setNickname] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 로컬 스토리지에서 회원 정보 가져오기
+    const memberInfoString = localStorage.getItem('memberInfo');
+    if (memberInfoString) {
+      const memberInfo = JSON.parse(memberInfoString);
+      setNickname(memberInfo.nickname);
+    }
+  }, []);
+
+  // 독서모임 버튼 클릭 핸들러 추가
+  const handleBookClubClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // 기본 링크 동작 방지
+    alert('독서모임 기능은 추후에 업데이트 예정입니다.');
+  };
+
+  const logoVariants = {
+    initial: { x: -20, opacity: 0 },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.5, delay: 0.2 },
+    },
+  };
+
+  const profileVariants = {
+    initial: { x: 20, opacity: 0 },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.5, delay: 0.2 },
+    },
+  };
+
+  return (
+    <>
+      <motion.nav
+        initial="hidden"
+        animate="visible"
+        className={`fixed top-0 left-0 right-0 w-full flex justify-center px-16 z-50 transition-opacity duration-300 ${
+          isDrawerOpen ? 'opacity-40' : 'opacity-100'
+        }`}
+        style={{ padding: '2.25rem 4rem 0 4rem' }}
+      >
+        <div className="w-full flex justify-between items-center z-50">
+          <motion.div
+            variants={logoVariants}
+            initial="initial"
+            animate="animate"
+            whileHover={{
+              scale: 1.05,
+              transition: { type: 'spring', stiffness: 400 },
+            }}
+          >
+            <Link href="/" className="block">
+              <Image src="/logo.svg" width={110} height={100} alt="logo" />
+            </Link>
+          </motion.div>
+
+          <div className="flex items-center justify-between w-[28rem] h-12">
+            {[
+              { href: '/newbook', label: '신규 책 추가', onClick: undefined },
+              { href: '#', label: '독서 모임', onClick: handleBookClubClick }, // href를 #으로 변경하고 onClick 핸들러 추가
+              { href: '/mylibrary', label: '내 서재', onClick: undefined },
+            ].map((item) => (
+              <motion.div
+                key={item.href}
+                className="relative h-full flex items-center"
+                whileHover="hover"
+              >
+                <Link
+                  href={item.href}
+                  className={`
+                    ${pathname === item.href ? 'text-green-700' : 'text-gray-700'}
+                    text-xl font-semibold hover:text-white no-underline 
+                    transition-all duration-200 relative px-4 py-2 
+                    flex items-center justify-center h-full w-full
+                    overflow-hidden
+                  `}
+                  onClick={item.onClick}
+                >
+                  <motion.span
+                    className="relative z-10"
+                    variants={{
+                      hover: {
+                        y: -2,
+                        transition: { duration: 0.2 },
+                      },
+                    }}
+                  >
+                    {item.label}
+                  </motion.span>
+
+                  <motion.div
+                    className="absolute inset-0 bg-green-700"
+                    variants={{
+                      hover: {
+                        y: 0,
+                        transition: { duration: 0.2 },
+                      },
+                    }}
+                    initial={{ y: '100%' }}
+                  />
+
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-700"
+                    initial={{ scaleX: 0 }}
+                    animate={{
+                      scaleX: pathname === item.href ? 1 : 0,
+                      transition: { duration: 0.3 },
+                    }}
+                    variants={{
+                      hover: {
+                        scaleX: 1,
+                        transition: { duration: 0.2 },
+                      },
+                    }}
+                    style={{
+                      transformOrigin: 'center',
+                    }}
+                  />
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            className="flex items-center gap-4"
+            variants={profileVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <motion.button
+              className="text-gray-600 cursor-pointer p-2"
+              whileHover={{
+                scale: 1.1,
+                transition: { type: 'spring', stiffness: 400 },
+              }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Bell size={25} />
+            </motion.button>
+
+            <motion.div
+              className="flex items-center gap-2 p-2 rounded-full cursor-pointer"
+              whileHover={{
+                scale: 1.02,
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                transition: { duration: 0.2 },
+              }}
+            >
+              <Image
+                src="/profile.svg"
+                width={40}
+                height={40}
+                className="rounded-full"
+                alt="profile"
+              />
+              <span className="text-gray-700 font-medium">{nickname || 'Profile'}</span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.nav>
+
+      {isDrawerOpen && <div className="fixed top-0 left-0 right-0 h-24 z-40" />}
+    </>
+  );
+};
 
 // 책 데이터 타입 정의
 interface BookLog {
   id: string;
   title: string;
-  authors: string[];
+  authors: string | string[]; // 타입을 더 유연하게 변경
   thumbnail: string | null;
   createId: string;
+  publisher: string;
 }
 
 interface BookLogsResponse {
@@ -22,7 +204,7 @@ interface BookLogsResponse {
 
 const MyLibrary = () => {
   const [isOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<string>('전체');
+  const [activeFilter] = useState<string>('전체'); //, setActiveFilter 이거 넣으셈
   const [bookLogs, setBookLogs] = useState<BookLog[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -105,7 +287,7 @@ const MyLibrary = () => {
   }, [activeFilter, statusMap]); // statusMap을 의존성 배열에 추가
 
   // 필터 항목 목록
-  const filters = ['전체', '읽고픈', '읽는중', '완독', '포기'];
+  // const filters = ['전체', '읽고픈', '읽는중', '완독', '포기'];
 
   return (
     <div
@@ -131,7 +313,7 @@ const MyLibrary = () => {
           </p>
 
           {/* 필터 버튼 */}
-          <div className="flex justify-center space-x-2 mt-6">
+          {/* <div className="flex justify-center space-x-2 mt-6">
             {filters.map((filter) => (
               <button
                 key={filter}
@@ -152,7 +334,7 @@ const MyLibrary = () => {
                 {filter}
               </button>
             ))}
-          </div>
+          </div> */}
         </div>
 
         <div className="flex-grow flex flex-col w-full justify-center items-center bg-white px-16 pt-8 pb-16">
@@ -178,41 +360,48 @@ const MyLibrary = () => {
           ) : (
             /* 책 그리드 */
             <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-              {bookLogs.map((book) => (
-                <div key={book.createId} className="flex flex-col items-center">
-                  {/* 책 커버 이미지 */}
-                  <div className="w-full aspect-[3/4] relative mb-3 cursor-pointer group">
-                    {book.thumbnail ? (
-                      <Image
-                        src={book.thumbnail}
-                        alt={book.title}
-                        fill
-                        className="object-cover rounded-md shadow-md"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-md shadow-md">
-                        <span className="text-gray-400">이미지 없음</span>
-                      </div>
-                    )}
+              {bookLogs.map((book) => {
+                // 작가 정보 정규화
+                const normalizedAuthors = book.authors
+                  ? Array.isArray(book.authors)
+                    ? book.authors.join(', ')
+                    : String(book.authors)
+                  : '작가 정보 없음';
 
-                    {/* 호버 오버레이 */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-md flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <Button className="bg-white text-gray-800 hover:bg-gray-100" size="sm">
-                          상세보기
-                        </Button>
+                return (
+                  <div key={book.createId} className="flex flex-col items-center">
+                    {/* 책 커버 이미지 */}
+                    <div className="w-full aspect-[3/4] relative mb-3 cursor-pointer group">
+                      {book.thumbnail ? (
+                        <Image
+                          src={book.thumbnail}
+                          alt={book.title}
+                          fill
+                          className="object-cover rounded-md shadow-md"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200 rounded-md shadow-md">
+                          <span className="text-gray-400">이미지 없음</span>
+                        </div>
+                      )}
+
+                      {/* 호버 오버레이 */}
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-md flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <Button className="bg-white text-gray-800 hover:bg-gray-100" size="sm">
+                            상세보기
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                    <div className="w-full text-left">
+                      <div className="font-medium text-gray-900 truncate">{book.title}</div>
+                      <div className="text-sm text-gray-500 truncate">{normalizedAuthors}</div>
+                      <div className="text-sm text-gray-400 truncate">{book.publisher}</div>
+                    </div>
                   </div>
-
-                  {/* 책 정보 */}
-                  <div className="w-full text-left">
-                    <div className="font-medium text-gray-900 truncate">{book.title}</div>
-                    <div className="text-sm text-gray-500 truncate">{book.authors.join(', ')}</div>
-                    <div className="text-sm text-gray-400 truncate">ID: {book.id}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
