@@ -16,7 +16,6 @@ permissions:
   packages: write
   
 jobs:
-jobs:
   build-and-push:
     name: Build and Push Next.js Docker Image
     runs-on: ubuntu-latest
@@ -46,6 +45,42 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Send Slack Notification on Build Success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'good',
+                title: '✅ 빌드 성공',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n이미지 빌드 및 푸시가 성공적으로 완료되었습니다! 🎉`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+      - name: Send Slack Notification on Build Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'danger',
+                title: '❌ 빌드 실패',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n⚠️ 이미지 빌드 중 오류가 발생했습니다.\n확인이 필요합니다!`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   deploy:
     name: Deploy to Dev Server
@@ -147,7 +182,7 @@ jobs:
             exit 1
           fi
         
-      - name: Send Slack Notification on Success
+      - name: Send Slack Notification on Deployment Success
         if: success()
         uses: 8398a7/action-slack@v3
         with:
@@ -165,7 +200,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           
-      - name: Send Slack Notification on Failure
+      - name: Send Slack Notification on Deployment Failure
         if: failure()
         uses: 8398a7/action-slack@v3
         with:
