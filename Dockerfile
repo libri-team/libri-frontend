@@ -1,24 +1,24 @@
 # Dockerfile
 # 빌드 스테이지
 FROM node:20-alpine AS builder
-
 WORKDIR /app
-
 # Corepack 설정
 RUN apk add --no-cache libc6-compat && \
     corepack enable && \
     corepack prepare yarn@4.6.0 --activate
-
 # 소스 파일 복사
 COPY . .
 
 # 빌드 시 환경변수 설정
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
 # 의존성 설치 및 빌드
 RUN yarn install --immutable
-RUN yarn build
+# 디버깅을 위해 환경 변수 출력
+RUN echo "Building with NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
+# 빌드 명령에 오류 처리 추가
+RUN yarn build || (echo "Build failed. Check logs above for details." && exit 1)
+
 
 # 프로덕션 스테이지
 FROM node:20-alpine
