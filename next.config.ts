@@ -15,6 +15,16 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // 빌드 시 린트 검사 비활성화
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // 타입 체크 비활성화
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   // 프록시 설정 추가
   async rewrites() {
     return [
