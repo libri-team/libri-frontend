@@ -8,15 +8,20 @@ RUN apk add --no-cache libc6-compat && \
     corepack prepare yarn@4.6.0 --activate
 # 소스 파일 복사
 COPY . .
-
 # 빌드 시 환경변수 설정
 ARG NEXT_PUBLIC_API_URL
+ARG GOOGLE_CLIENT_ID
+ARG GOOGLE_CLIENT_SECRET
+ARG NEXTAUTH_SECRET
+
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+ENV GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
 # 의존성 설치 및 빌드
 RUN yarn install --immutable
-# 디버깅을 위해 환경 변수 출력
-RUN echo "Building with NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
-# 빌드 명령에 오류 처리 추가
+RUN echo "Building with environment variables set"
 RUN yarn build || (echo "Build failed. Check logs above for details." && exit 1)
 
 
