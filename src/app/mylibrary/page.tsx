@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
@@ -21,21 +21,23 @@ interface BookLogsResponse {
 }
 
 const MyLibrary = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('전체');
   const [bookLogs, setBookLogs] = useState<BookLog[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 상태값 매핑
-  const statusMap = {
-    전체: '',
-    읽고픈: 'WISHLIST',
-    읽는중: 'READING',
-    완독: 'COMPLETED',
-    포기: 'ABANDONED',
-  };
+  // statusMap을 useMemo로 감싸서 메모이제이션
+  const statusMap = useMemo<{ [key: string]: string }>(() => {
+    return {
+      전체: '',
+      읽고픈: 'WISHLIST',
+      읽는중: 'READING',
+      완독: 'COMPLETED',
+      포기: 'ABANDONED',
+    };
+  }, []);
 
   // 책 데이터 가져오기
   const fetchBooks = async (status: string = '') => {
@@ -43,39 +45,54 @@ const MyLibrary = () => {
     setError(null);
 
     try {
-      // API 파라미터 구성
+      // 토큰 확인
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
       const params = new URLSearchParams({
         page: '0',
-        size: '100',
+        size: '5',
+        isPrivate: 'true',
       });
 
       if (status) {
         params.append('status', status);
       }
 
-      // API 요청
-      const response = await fetch(`/api/booklogs?${params.toString()}`, {
+      // 전체 URL 출력
+      const url = `https://dev-api.libri.kr/booklogs?${params.toString()}`;
+      console.log('요청 URL:', url);
+      console.log('인증 토큰:', token);
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('응답 상태:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `서버 오류: ${response.status}`);
+        const errorText = await response.text();
+        console.error('상세 에러:', errorText);
+        throw new Error(`서버 오류: ${response.status}`);
       }
 
       const data: BookLogsResponse = await response.json();
-      console.log('책 데이터 로드됨:', data);
+      console.log('응답 데이터:', data);
 
+      // 데이터 상태 업데이트
       setBookLogs(data.logs);
       setTotalCount(data.totalCount);
     } catch (err) {
-      console.error('책 데이터 로드 중 오류:', err);
-      setError(
-        `데이터를 불러오는 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      console.error('전체 요청 오류:', err);
+      setError(`데이터를 불러오는 중 오류가 발생했습니다: ${err}`);
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +102,7 @@ const MyLibrary = () => {
   useEffect(() => {
     const mappedStatus = statusMap[activeFilter];
     fetchBooks(mappedStatus);
-  }, [activeFilter]);
+  }, [activeFilter, statusMap]); // statusMap을 의존성 배열에 추가
 
   // 필터 항목 목록
   const filters = ['전체', '읽고픈', '읽는중', '완독', '포기'];

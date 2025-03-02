@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
-import { signIn } from 'next-auth/react';
 
 const GoogleLogin = () => {
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     try {
-      // 명시적으로 'google' 제공업체를 지정하여 로그인 시도
-      await signIn('google', { callbackUrl: '/' });
+      console.log('구글 로그인 시작...');
+      // 구글 OAuth URL로 리다이렉트
+      const redirectUrl = 'https://dev-api.libri.kr/oauth2/authorization/google';
+      console.log('리다이렉트 URL:', redirectUrl);
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error('구글 로그인 중 오류 발생:', error);
     }

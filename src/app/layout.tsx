@@ -1,40 +1,41 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Nanum_Gothic } from 'next/font/google';
 import './globals.css';
-import Navigation from '@/components/Navigation';
-import Alerts from '@/components/ui/alert';
-import AuthProvider from '@/components/AuthProvider';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-const inter = Inter({ subsets: ['latin'] });
+import { AuthProvider } from '@/contexts/AuthContext';
 
-export const metadata: Metadata = {
-  title: 'Libri - 당신만의 개인 서재',
-  description: '도서를 관리하고 독서 기록을 남기는 개인 서재 서비스',
+const nanum_gothic = Nanum_Gothic({
+  subsets: ['latin'],
+  weight: ['400', '700', '800'],
+});
+
+// const geistSans = Geist({
+//   variable: '--font-geist-sans',
+//   subsets: ['latin'],
+// });
+
+// const geistMono = Geist_Mono({
+//   variable: '--font-geist-mono',
+//   subsets: ['latin'],
+// });
+
+type Props = {
+  children: React.ReactNode;
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  title: 'Libri - Your Personal Library ',
+  description: 'Your Personal Library ',
+};
+
+export default function RootLayout({ children }: Props) {
   return (
-    <html lang="ko">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-        <AuthProvider>
-          <Navigation />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </main>
-          {/* @ts-expect-error - 컴포넌트가 props를 필요로 하지 않습니다 */}
-          <Alerts />
-          <footer className="bg-white border-t border-gray-200 py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <p className="text-center text-sm text-gray-500">
-                © {new Date().getFullYear()} Libri. All rights reserved.
-              </p>
-            </div>
-          </footer>
-        </AuthProvider>
+    <html lang="en" className={nanum_gothic.className}>
+      <body className="bg-green-950">
+        <main>
+          <AuthProvider>{children}</AuthProvider>
+        </main>
       </body>
     </html>
   );

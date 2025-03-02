@@ -15,7 +15,6 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -85,10 +84,12 @@ const ProfileImageUploader = () => {
         <>
           {/* 이미지 표시 영역 */}
           <div className="w-full h-full relative">
-            <img
+            <Image
               src={image}
               alt="프로필 이미지"
-              className={`w-full h-full object-cover transition-all duration-300 ${isHovering ? 'brightness-[0.6]' : ''}`}
+              layout="fill"
+              objectFit="cover"
+              className={`transition-all duration-300 ${isHovering ? 'brightness-[0.6]' : ''}`}
             />
 
             {/* 호버 시 나타나는 버튼들 */}

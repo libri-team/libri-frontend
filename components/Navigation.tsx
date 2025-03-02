@@ -2,18 +2,28 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
 interface NavigationProps {
   isDrawerOpen?: boolean;
+  nickname?: string | null; // 닉네임 prop 추가
 }
 
 const Navigation = ({ isDrawerOpen }: NavigationProps) => {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const [nickname, setNickname] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 로컬 스토리지에서 회원 정보 가져오기
+    const memberInfoString = localStorage.getItem('memberInfo');
+    if (memberInfoString) {
+      const memberInfo = JSON.parse(memberInfoString);
+      setNickname(memberInfo.nickname);
+    }
+  }, []);
 
   const logoVariants = {
     initial: { x: -20, opacity: 0 },
@@ -38,12 +48,12 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
       <motion.nav
         initial="hidden"
         animate="visible"
-        className={`fixed top-0 left-0 right-0 w-full flex justify-center bg-white shadow-md px-16 z-50 transition-opacity duration-300 ${
+        className={`fixed top-0 left-0 right-0 w-full flex justify-center px-16 z-50 transition-opacity duration-300 ${
           isDrawerOpen ? 'opacity-40' : 'opacity-100'
         }`}
-        style={{ padding: '1.5rem 4rem' }}
+        style={{ padding: '2.25rem 4rem 0 4rem' }}
       >
-        <div className="w-full max-w-screen-xl flex justify-between items-center z-50">
+        <div className="w-full flex justify-between items-center z-50">
           <motion.div
             variants={logoVariants}
             initial="initial"
@@ -54,13 +64,12 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
             }}
           >
             <Link href="/" className="block">
-              <Image src="/logo.svg" width={120} height={40} alt="Libri" className="h-10 w-auto" />
+              <Image src="/logo.svg" width={110} height={100} alt="logo" />
             </Link>
           </motion.div>
 
-          <div className="flex items-center justify-between space-x-10 h-12">
+          <div className="flex items-center justify-between w-[28rem] h-12">
             {[
-
               { href: '/newbook', label: '신규 책 추가' },
               { href: '/addbookclub', label: '독서 모임' },
               { href: '/mylibrary', label: '내 서재' },
@@ -73,19 +82,18 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                 <Link
                   href={item.href}
                   className={`
-                    ${pathname === item.href ? 'text-emerald-700 font-bold' : 'text-gray-700 font-medium'}
-                    text-base hover:text-emerald-600 no-underline 
+                    ${pathname === item.href ? 'text-green-700' : 'text-gray-700'}
+                    text-xl font-semibold hover:text-white no-underline 
                     transition-all duration-200 relative px-4 py-2 
-                    flex items-center justify-center h-full
+                    flex items-center justify-center h-full w-full
                     overflow-hidden
                   `}
                 >
-                  {item.icon && <span className="mr-2">{item.icon}</span>}
                   <motion.span
                     className="relative z-10"
                     variants={{
                       hover: {
-                        y: -1,
+                        y: -2,
                         transition: { duration: 0.2 },
                       },
                     }}
@@ -94,7 +102,18 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                   </motion.span>
 
                   <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600"
+                    className="absolute inset-0 bg-green-700"
+                    variants={{
+                      hover: {
+                        y: 0,
+                        transition: { duration: 0.2 },
+                      },
+                    }}
+                    initial={{ y: '100%' }}
+                  />
+
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-700"
                     initial={{ scaleX: 0 }}
                     animate={{
                       scaleX: pathname === item.href ? 1 : 0,
@@ -122,46 +141,33 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
             animate="animate"
           >
             <motion.button
-              className="text-gray-600 cursor-pointer p-2 hover:bg-gray-100 rounded-full"
+              className="text-gray-600 cursor-pointer p-2"
               whileHover={{
                 scale: 1.1,
                 transition: { type: 'spring', stiffness: 400 },
               }}
               whileTap={{ scale: 0.9 }}
             >
-              <Bell size={22} />
+              <Bell size={25} />
             </motion.button>
 
-            {session?.user ? (
-              <motion.div
-                className="flex items-center gap-2 p-2 rounded-full cursor-pointer hover:bg-gray-100"
-                whileHover={{
-                  scale: 1.02,
-                  transition: { duration: 0.2 },
-                }}
-              >
-                {session.user.image ? (
-                  <Image
-                    src={session.user.image}
-                    width={36}
-                    height={36}
-                    className="rounded-full"
-                    alt="프로필"
-                  />
-                ) : (
-                  <div className="bg-emerald-100 rounded-full p-2">
-                    <User size={20} className="text-emerald-700" />
-                  </div>
-                )}
-                <span className="text-gray-700 font-medium text-sm">
-                  {session.user.name || session.user.email?.split('@')[0] || '사용자'}
-                </span>
-              </motion.div>
-            ) : (
-              <Link href="/auth/login" className="text-emerald-700 font-medium text-sm hover:text-emerald-800">
-                로그인
-              </Link>
-            )}
+            <motion.div
+              className="flex items-center gap-2 p-2 rounded-full cursor-pointer"
+              whileHover={{
+                scale: 1.02,
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                transition: { duration: 0.2 },
+              }}
+            >
+              <Image
+                src="/profile.svg"
+                width={40}
+                height={40}
+                className="rounded-full"
+                alt="profile"
+              />
+              <span className="text-gray-700 font-medium">{nickname || 'Profile'}</span>
+            </motion.div>
           </motion.div>
         </div>
       </motion.nav>

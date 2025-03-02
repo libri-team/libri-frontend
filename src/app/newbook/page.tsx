@@ -64,7 +64,7 @@ interface BookDetailCardProps {
   onClose: () => void;
 }
 const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, onAddBook }) => {
-  const [hoveredBookIndex, setHoveredBookIndex] = useState(null);
+  const [hoveredBookIndex, setHoveredBookIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,17 +82,24 @@ const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, 
     setError(null);
 
     try {
-      const response = await axios.get('/api/search', {
+      // 토큰을 localStorage에서 가져오기
+      const token = localStorage.getItem('accessToken');
+
+      const response = await axios.get('https://dev-api.libri.kr/api/aladin/search', {
         params: {
           keyword: keyword.trim(),
-          page,
+          page: page - 1, // API가 0부터 시작하므로 page - 1 처리
           size: pageSize,
+        },
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`, // 토큰 헤더에 추가
         },
       });
 
       const data = response.data;
 
-      // 검색 결과 매핑 및 상태 업데이트
+      // 기존 로직 유지
       if (data && Array.isArray(data.books)) {
         setTotalCount(data.totalCount || 0);
         setTotalPages(Math.ceil((data.totalCount || 0) / pageSize));
@@ -105,7 +112,7 @@ const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, 
           cover: book.thumbnail,
           pubDate: book.pubDate,
           isbn: book.isbn,
-          link: book.link || '', // Include the link
+          link: book.link || '',
         }));
 
         setSearchResults(formattedBooks);
@@ -122,7 +129,6 @@ const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, 
       setIsLoading(false);
     }
   };
-
   // 검색어 변경 시 검색 실행
   const handleSearch = () => {
     setCurrentPage(1);
@@ -366,31 +372,50 @@ const BookDetailCard: React.FC<BookDetailCardProps> = ({ book, onClose }) => {
   );
 };
 
-// Add this function to handle the book submission
-const submitBook = async (bookData) => {
+interface BookSubmitData {
+  isbn: string;
+  title: string;
+  description: string;
+  authors: string;
+  publisher: string;
+  thumbnail: string;
+  link: string;
+  rating: number;
+  status: string;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  clubId: null;
+}
+const submitBook = async (bookData: BookSubmitData) => {
   try {
-    const response = await axios.post('/api/booklogs', {
-      isbn: bookData.isbn || '',
-      title: bookData.title || '',
-      description: bookData.description || '',
-      authors: bookData.author || '',
-      publisher: bookData.publisher || '',
-      thumbnail: bookData.cover || '',
-      link: bookData.link || '',
-      rating: bookData.rating || 0,
-      status: bookData.status || 'ABANDONED',
-      startDateTime: bookData.startDateTime || null,
-      endDateTime: bookData.endDateTime || null,
-      clubId: null,
+    const token = localStorage.getItem('accessToken');
+
+    const response = await axios.post('https://dev-api.libri.kr/booklogs', bookData, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json;charset=UTF-8',
+      },
     });
 
+    console.log('북로그 생성 결과:', response.data);
+
+    if (response.data && response.data.id) {
+      console.log('생성된 북로그 ID:', response.data.id);
+    }
+
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('책 추가 오류:', error);
+
+    // axios 에러 타입 검사
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('오류 응답 데이터:', error.response.data);
+    }
+
     throw error;
   }
 };
-
 // Modify the NewBookPage component to include the submit functionality
 const NewBookPage = () => {
   // 기존 상태 유지
@@ -532,7 +557,7 @@ const NewBookPage = () => {
     return format(date, 'yyyy-MM-dd HH:mm:ss');
   };
 
-  // Handle book submission
+  // 수정된 handleSubmit 함수
   const handleSubmit = async () => {
     if (!selectedBook) {
       alert('책을 선택해주세요.');
@@ -543,23 +568,38 @@ const NewBookPage = () => {
     setSubmitError(null);
 
     try {
+      // 필드명을 API 요구사항에 맞게 변환
       const bookData = {
-        ...selectedBook,
+        isbn: selectedBook.isbn || '',
+        title: selectedBook.title || '',
+        description: selectedBook.description || '',
+        authors: selectedBook.author || '', // author 필드를 authors로 변환
+        publisher: selectedBook.publisher || '',
+        thumbnail: selectedBook.cover || '', // cover 필드를 thumbnail로 변환
+        link: selectedBook.link || '',
         rating: rating,
         status: selectedStatus,
         startDateTime: formatDateTimeForApi(startDate),
         endDateTime: formatDateTimeForApi(endDate),
+        clubId: null,
       };
 
-      await submitBook(bookData);
+      console.log('전송할 데이터:', bookData);
+
+      const result = await submitBook(bookData);
       setSubmitSuccess(true);
 
-      // Reset form or redirect
+      // 결과 ID 출력
+      if (result && result.id) {
+        console.log(`북로그가 성공적으로 생성되었습니다. ID: ${result.id}`);
+      }
+
+      // 성공 후 리디렉션 또는 초기화
       setTimeout(() => {
-        // Redirect or show success message
-        window.location.href = '/books'; // Adjust the redirect URL as needed
+        window.location.href = '/mylibrary'; // 필요한 경로로 조정
       }, 1000);
     } catch (error) {
+      console.error('북로그 생성 중 오류:', error);
       setSubmitError('책을 추가하는 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);
