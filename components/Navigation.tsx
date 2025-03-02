@@ -60,10 +60,10 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
 
           <div className="flex items-center justify-between space-x-10 h-12">
             {[
-              { href: '/books/search', label: '책 검색', icon: <Search size={18} /> },
-              { href: '/mylibrary', label: '내 서재', icon: null },
-              { href: '/bookclub', label: '북클럽', icon: null },
-              { href: '/newbook', label: '책 등록', icon: null },
+
+              { href: '/newbook', label: '신규 책 추가' },
+              { href: '/addbookclub', label: '독서 모임' },
+              { href: '/mylibrary', label: '내 서재' },
             ].map((item) => (
               <motion.div
                 key={item.href}
