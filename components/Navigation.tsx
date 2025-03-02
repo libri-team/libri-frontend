@@ -59,7 +59,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
           <div className="flex items-center justify-between w-[28rem] h-12">
             {[
               { href: '/newbook', label: '신규 책 추가' },
-              { href: '/bookclub', label: '독서 모임' },
+              { href: '/addbookclub', label: '독서 모임' },
               { href: '/mylibrary', label: '내 서재' },
             ].map((item) => (
               <motion.div
