@@ -100,7 +100,8 @@ const NewBookPage = () => {
       completed: { bg: 'bg-[#DBEAFE]', text: 'text-blue-800', hover: 'hover:bg-[#BFDBFE]' },
       abandoned: { bg: 'bg-[#FFE4E6]', text: 'text-red-800', hover: 'hover:bg-[#FECDD3]' },
     };
-    return styles[status] || styles.wishlist;
+    type StatusKey = keyof typeof styles;
+    return styles[status as StatusKey] || styles.wishlist;
   };
   const handleValueChange = (value: string) => {
     setSelectedStatus(value);
