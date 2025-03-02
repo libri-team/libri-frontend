@@ -143,11 +143,13 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
           <button
             onClick={handleGenerateTestToken}
             disabled={loading || !email.includes('@')}
-            className={`py-2 px-4 rounded font-medium ${
-              loading || !email.includes('@')
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-700 text-white'
-            }`}
+            className={`
+    z-30 py-2 px-4 rounded font-medium 
+    ${
+      loading || !email.includes('@')
+        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        : 'bg-[#215B32] text-white hover:opacity-80' // 불투명도로 호버 효과 대체
+    }`}
           >
             {loading ? '처리 중...' : '생성'}
           </button>
