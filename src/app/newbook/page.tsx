@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { CirclePlus, Search, CalendarIcon } from 'lucide-react';
-import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -114,7 +113,6 @@ const NewBookPage = () => {
         isOpen ? 'scale-[0.98] rounded-xl overflow-hidden' : 'scale-100'
       }`}
     >
-      <Navigation isDrawerOpen={isOpen} />
       <div className="absolute top-48 left-0 right-0 z-0 flex justify-center">
         <h1 className="font-playfair text-[17.5rem] font-normal leading-[22.75rem] text-[#183C23] opacity-15 whitespace-nowrap">
           Add New book

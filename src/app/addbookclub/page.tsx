@@ -1,183 +1,300 @@
 'use client';
 
-import React, { useState } from 'react';
-import { CirclePlus, Search, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { X, Plus, Users } from 'lucide-react';
 import Navigation from '@/components/Navigation';
-import { Button } from '@/components/ui/button';
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { clubService } from '@/lib/services/clubService';
+import { memberService } from '@/lib/services/memberService';
+import { Member, ClubRule, CreateClubRequest } from '@/lib/services/clubService';
 
-interface drawerprops {
-  isOpen: boolean;
-  setIsOpen: (value: boolean) => void;
-}
+export default function AddBookClubPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<Member[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
+  const [rules, setRules] = useState<ClubRule[]>([
+    { dateCount: 1, ruleStatus: 'WEEK', bookCount: 1, rule: '일주일에 1권 읽기' },
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-const BookSearchDrawer = ({ isOpen, setIsOpen }: drawerprops) => {
+  // Search for members
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return;
+    
+    try {
+      const members = await memberService.getMembers(searchTerm);
+      setSearchResults(members);
+    } catch (err) {
+      console.error('Failed to search members:', err);
+      setError('회원 검색에 실패했습니다.');
+    }
+  };
+
+  // Add member to selected list
+  const addMember = (member: Member) => {
+    if (!selectedMembers.some(m => m.id === member.id)) {
+      setSelectedMembers([...selectedMembers, member]);
+    }
+    setSearchTerm('');
+    setSearchResults([]);
+  };
+
+  // Remove member from selected list
+  const removeMember = (memberId: number) => {
+    setSelectedMembers(selectedMembers.filter(m => m.id !== memberId));
+  };
+
+  // Add a new rule
+  const addRule = () => {
+    setRules([
+      ...rules,
+      { dateCount: 1, ruleStatus: 'WEEK', bookCount: 1, rule: '' },
+    ]);
+  };
+
+  // Update a rule
+  const updateRule = (index: number, field: keyof ClubRule, value: string | number) => {
+    const updatedRules = [...rules];
+    updatedRules[index] = { ...updatedRules[index], [field]: value };
+    setRules(updatedRules);
+  };
+
+  // Remove a rule
+  const removeRule = (index: number) => {
+    setRules(rules.filter((_, i) => i !== index));
+  };
+
+  // Create the book club
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      setError('모임 이름을 입력해주세요.');
+      return;
+    }
+    
+    if (selectedMembers.length === 0) {
+      setError('최소 한 명 이상의 회원을 추가해주세요.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const clubData: CreateClubRequest = {
+        name,
+        description,
+        members: selectedMembers,
+        rules,
+      };
+      
+      await clubService.createClub(clubData);
+      router.push('/bookclub');
+    } catch (err) {
+      console.error('Failed to create book club:', err);
+      setError('독서 모임 생성에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      <DrawerTrigger className="hidden" />
-      <DrawerContent className="flex items-center justify-center h-[65vh]">
-        <div className="mx-auto w-full h-full max-w-5xl">
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="text-[1.375rem] font-semibold">책 정보 검색</DrawerTitle>
-            <DrawerDescription className="text-base font-medium text-gray-400">
-              제목, 저자, 출판사, ISBN 등 정보로 검색 가능합니다.
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <main className="container mx-auto px-4 py-24">
+        <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">새 독서 모임 만들기</h1>
+          
+          {error && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
+              {error}
             </div>
-            <Input
-              placeholder="책 정보 검색하기"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg"
-            />
-          </div>
-
-          <div className="border-t border-gray-200 my-6"></div>
-
-          <div className="text-left">
-            <p className="text-[1.25rem] font-semibold">규린님이 선호할 수도 있는 책</p>
-          </div>
-          <div className="mt-6 text-center">
-            <p className="text-gray-500 text-sm">규린님이 선호할 수 있는 책이 없습니다.</p>
-          </div>
-
-          <DrawerFooter>
-            <DrawerClose asChild>
-              <Button variant="outline" className="w-full">
-                닫기
-              </Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </div>
-      </DrawerContent>
-    </Drawer>
-  );
-};
-
-const NewBookPage = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div
-      className={`min-h-screen w-full bg-[#eef0ed] min-w-sm relative transition-all duration-300 ease-in-out flex flex-col ${
-        isOpen ? 'scale-[0.98] rounded-xl overflow-hidden' : 'scale-100'
-      }`}
-    >
-      <Navigation isDrawerOpen={isOpen} />
-      <div className="absolute top-48 left-0 right-0 z-0 flex justify-center">
-        <h1 className="font-playfair text-[17.5rem] font-normal leading-[22.75rem] text-[#183C23] opacity-15 whitespace-nowrap">
-          Book Club
-        </h1>
-      </div>
-
-      <main className="relative z-10 pt-[11.75rem] flex flex-col flex-grow">
-        <div className="relative text-center mb-[5.25rem]">
-          <h2 className="text-[2.375rem] font-semibold text-gray-800">신규 모임 생성</h2>
-          <p className="text-[1.125rem] text-[#737373]">
-            같이 읽는 즐거움, 더 오래 기억되는 이야기
-          </p>
-        </div>
-
-        <div className="flex-grow flex flex-col  w-full items-center justify-center bg-white  px-[22.69rem] pt-[4.75rem]">
-          <div className="flex items-center mb-[5.88rem] gap-10">
-            {/* 왼쪽 컨텐츠 */}
-            <div>
-              <h3 className="text-xl  font-medium mb-4">프로필 사진</h3>
-
-              <div className="flex w-[36.375rem] h-[27.5rem] bg-[#F5F5F5] border-2 border-dashed border-[#A3A3A3] rounded-2xl p-6 items-center justify-center ">
-                <Button
-                  onClick={() => setIsOpen(true)}
-                  variant="outline"
-                  className="flex bg-white items-center justify-center w-[10rem] px-[0.75rem] py-[0.375rem] text-green-900 border-2 rounded border-[#215B32] hover:bg-green-50"
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-6">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                모임 이름
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="모임 이름을 입력하세요"
+              />
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                모임 설명
+              </label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                rows={3}
+                placeholder="모임에 대한 설명을 입력하세요"
+              />
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                회원 추가
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="닉네임 또는 ID로 검색"
+                />
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-800"
                 >
-                  <div className="flex  items-center gap-2 ">
-                    <span className="flex-grow text-center text-base">프로필 사진 넣기 </span>
-                    <CirclePlus className="w-5 h-5" />
-                  </div>
-                </Button>
+                  검색
+                </button>
               </div>
-              <BookSearchDrawer isOpen={isOpen} setIsOpen={setIsOpen} />
-            </div>
-
-            {/* 오른쪽 컨텐츠 */}
-            <div className="w-[37.25rem] h-80">
-              <div>
-                <h3 className="text-lg font-medium ">모임명</h3>{' '}
-                <div className="flex w-72 h-12 items-center border border-gray-200 rounded-lg p-2">
-                  <Input type="text" placeholder="YYYY.MM.DD 00:00" className=""></Input>
-                </div>
-                <div className="space-y-6"></div>
-                <div className="flex w-full">
-                  <div className="mr-5">
-                    <h3 className="text-lg font-medium ">시작일</h3>
-                    <div className="flex w-72 h-12 items-center border border-gray-200 rounded-lg p-2">
-                      <Calendar className="h-6 w-6 text-gray-400" />
-                      <Input type="text" placeholder="YYYY.MM.DD 00:00" className=""></Input>
+              
+              {searchResults.length > 0 && (
+                <div className="mb-4 border border-gray-200 rounded-md max-h-40 overflow-y-auto">
+                  {searchResults.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      onClick={() => addMember(member)}
+                    >
+                      <span>{member.nickname} ({member.uniqueId})</span>
+                      <Plus size={16} className="text-green-700" />
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium ">마감일</h3>
-                    <div className="flex w-72 h-12 items-center border border-gray-200 rounded-lg p-2">
-                      <Calendar className="h-6 w-6 text-gray-400" />
-                      <Input type="text" placeholder="YYYY.MM.DD 00:00" className=""></Input>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <h3 className="text-lg font-medium ">상태</h3>
-                <div className="space-y-6">
-                  <div>
-                    <Select>
-                      <SelectTrigger className="w-72 border-2 rounded">
-                        <SelectValue placeholder="상태 선택하기" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="reading">읽는 중</SelectItem>
-                        <SelectItem value="completed">완독</SelectItem>
-                        <SelectItem value="wishlist">읽고 싶은 책</SelectItem>
-                      </SelectContent>
-                    </Select>
+              )}
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full"
+                  >
+                    <span>{member.nickname}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeMember(member.id)}
+                      className="text-green-800 hover:text-green-900"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
-          </div>
-
-          {/*  아래 생성하기  */}
-          <div className="flex justify-center items-center shrink-0 w-[18.5rem] h-16">
-            <Button className="flex text-center w-full h-full px-4 py-2 rounded-[10rem] bg-[#215B32] hover:bg-green-700 text-white text-xl font-normal">
-              생성하기
-            </Button>
-          </div>
+            
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  모임 규칙
+                </label>
+                <button
+                  type="button"
+                  onClick={addRule}
+                  className="text-sm text-green-700 hover:text-green-800 flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  규칙 추가
+                </button>
+              </div>
+              
+              {rules.map((rule, index) => (
+                <div key={index} className="flex gap-2 mb-2 items-start">
+                  <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={rule.dateCount}
+                        onChange={(e) => updateRule(index, 'dateCount', parseInt(e.target.value))}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded-md"
+                      />
+                      <select
+                        value={rule.ruleStatus}
+                        onChange={(e) => updateRule(index, 'ruleStatus', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded-md"
+                      >
+                        <option value="DAY">일</option>
+                        <option value="WEEK">주</option>
+                        <option value="MONTH">월</option>
+                      </select>
+                      <span>마다</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={rule.bookCount}
+                        onChange={(e) => updateRule(index, 'bookCount', parseInt(e.target.value))}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded-md"
+                      />
+                      <span>권</span>
+                    </div>
+                  </div>
+                  
+                  <input
+                    type="text"
+                    value={rule.rule}
+                    onChange={(e) => updateRule(index, 'rule', e.target.value)}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded-md"
+                    placeholder="규칙 설명 (선택사항)"
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => removeRule(index)}
+                    className="text-red-500 hover:text-red-700"
+                    disabled={rules.length === 1}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-800 flex items-center gap-2"
+              >
+                {isLoading ? '생성 중...' : (
+                  <>
+                    <Users size={18} />
+                    모임 생성하기
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </main>
-
-      {/* Overlay for drawer */}
-      <div
-        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      />
     </div>
   );
-};
-
-export default NewBookPage;
+}
