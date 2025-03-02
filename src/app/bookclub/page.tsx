@@ -37,7 +37,7 @@ const mockClubs = [
 
 export default function BookClubPage() {
   const router = useRouter();
-  const [clubs, setClubs] = useState(mockClubs);
+  const [clubs] = useState(mockClubs);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { apiRequest, withAuth } from './api';
+import { apiRequest } from './api';
 
 // Book interfaces
 export interface Book {

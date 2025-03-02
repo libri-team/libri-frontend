@@ -6,16 +6,16 @@ import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { BookOpen, Plus, Search, Star } from 'lucide-react';
 import Image from 'next/image';
-import Navigation from '@/components/Navigation';
-import BookLogCard from '@/components/ui/BookLogCard';
-import { booklogService } from '@/lib/services/booklogService';
-import { BookReadingStatus, BookLogSummary } from '@/lib/services/booklogService';
-import { authService } from '@/lib/services/authService';
+
+// 임시 타입 정의
+type BookReadingStatus = 'WANT_TO_READ' | 'READING' | 'COMPLETED' | 'ABANDONED' | 'GAVE_UP';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BookType = any; // 임시로 any 타입 사용 - 추후 정확한 타입으로 변경 필요
 
 export default function MyLibrary() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [books, setBooks] = useState<BookLogSummary[]>([]);
+  const { status } = useSession();
+  const [books, setBooks] = useState<BookType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<BookReadingStatus | 'ALL'>('ALL');
@@ -97,7 +97,7 @@ export default function MyLibrary() {
     fetchBooks();
   }, [router, status]);
 
-  const handleBookClick = (id) => {
+  const handleBookClick = (id: string) => {
     router.push(`/booklogs/${id}`);
   };
 
