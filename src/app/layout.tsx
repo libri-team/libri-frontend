@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Nanum_Gothic } from 'next/font/google';
 import './globals.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import AuthSession from '@/components/AuthSession';
 
 const nanum_gothic = Nanum_Gothic({
@@ -30,8 +31,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Props) {
   return (
     <html lang="en" className={nanum_gothic.className}>
-      <body>
-        <AuthSession>{children}</AuthSession>
+      <body className="bg-green-950">
+        <main>
+          <AuthSession>{children}</AuthSession>
+        </main>
       </body>
     </html>
   );
