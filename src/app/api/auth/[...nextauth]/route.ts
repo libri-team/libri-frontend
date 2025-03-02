@@ -2,6 +2,21 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
+// NextAuth의 기본 타입을 확장
+declare module 'next-auth' {
+  interface Session {
+    accessToken?: string;
+    idToken?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessToken?: string;
+    idToken?: string;
+  }
+}
+
 const handler = NextAuth({
   providers: [
     GoogleProvider({
@@ -22,48 +37,38 @@ const handler = NextAuth({
     async session({ session, token }) {
       // JWT 토큰에서 세션으로 액세스 토큰 전달
       if (token) {
-        // @ts-ignore
+        // session 타입에 accessToken, idToken 속성 추가
         session.accessToken = token.accessToken;
-        // @ts-ignore
         session.idToken = token.idToken;
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // 로그인 후 리다이렉션 처리
-      return url.startsWith(baseUrl) ? url : baseUrl;
+      // 외부 URL이면 기본 URL로 리다이렉트
+      if (url.startsWith("http") && !url.startsWith(baseUrl)) 
+        return baseUrl;
+      // 상대 경로면 기본 URL + 경로로 리다이렉트
+      if (url.startsWith("/")) 
+        return `${baseUrl}${url}`;
+      return baseUrl;
     },
   },
+  
   pages: {
-    signIn: '/login', // 커스텀 로그인 페이지 경로
-    error: '/login', // 에러 발생 시 리다이렉션할 페이지
-  },
-  session: {
-    strategy: 'jwt', // JWT 세션 사용
-    maxAge: 30 * 24 * 60 * 60, // 30일 (초 단위)
-  },
-  secret: process.env.NEXTAUTH_SECRET, // 환경변수에서 시크릿 키 가져오기
-  debug: process.env.NODE_ENV === 'development',
-});
-
-  pages: {
-    signIn: '/',
+    signIn: '/auth/login',
     signOut: '/',
     error: '/error',
     verifyRequest: '/',
     newUser: '/mylibrary'
   },
-  callbacks: {
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith("http") && !url.startsWith(baseUrl)) 
-        return baseUrl;
-      if (url.startsWith("/")) 
-        return `${baseUrl}${url}`;
-      return baseUrl;
-    }
-  }
-}
-);
-
+  
+  session: {
+    strategy: 'jwt', // JWT 세션 사용
+    maxAge: 30 * 24 * 60 * 60, // 30일 (초 단위)
+  },
+  
+  secret: process.env.NEXTAUTH_SECRET, // 환경변수에서 시크릿 키 가져오기
+  debug: process.env.NODE_ENV === 'development',
+});
 
 export { handler as GET, handler as POST };
