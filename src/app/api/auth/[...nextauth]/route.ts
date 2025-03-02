@@ -9,6 +9,7 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
   ],
+
   callbacks: {
     async jwt({ token, account }) {
       // 최초 로그인 시 액세스 토큰 저장
@@ -44,5 +45,25 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET, // 환경변수에서 시크릿 키 가져오기
   debug: process.env.NODE_ENV === 'development',
 });
+
+  pages: {
+    signIn: '/',
+    signOut: '/',
+    error: '/error',
+    verifyRequest: '/',
+    newUser: '/mylibrary'
+  },
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("http") && !url.startsWith(baseUrl)) 
+        return baseUrl;
+      if (url.startsWith("/")) 
+        return `${baseUrl}${url}`;
+      return baseUrl;
+    }
+  }
+}
+);
+
 
 export { handler as GET, handler as POST };

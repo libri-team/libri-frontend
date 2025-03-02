@@ -8,7 +8,7 @@ on:
 
 env:
   DOCKER_REGISTRY: ${{ secrets.NCP_CONTAINER_REGISTRY }}
-  NEXT_APP_NAME: libri-web
+  NEXT_APP_NAME: libri-frontend
   NEXT_APP_VERSION: ${{ github.sha }}
 
 permissions:
@@ -22,20 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Next.js application
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -57,6 +43,44 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/${{ env.NEXT_APP_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Send Slack Notification on Build Success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'good',
+                title: '✅ 빌드 성공',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n이미지 빌드 및 푸시가 성공적으로 완료되었습니다! 🎉`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+      - name: Send Slack Notification on Build Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,commit,author,eventName
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'danger',
+                title: '❌ 빌드 실패',
+                text: `*Repository:* ${process.env.AS_REPO}\n*Branch:* dev\n*커밋:* ${process.env.AS_COMMIT}\n*작성자:* ${process.env.AS_AUTHOR}\n\n⚠️ 이미지 빌드 중 오류가 발생했습니다.\n확인이 필요합니다!`,
+                footer: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   deploy:
     name: Deploy to Dev Server
@@ -106,7 +130,10 @@ jobs:
           script: |
             cd /app/libri-web
             
-            echo "${{ secrets.NCP_ACCESS_KEY }}" | docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u "${{ secrets.NCP_ACCESS_KEY }}" --password-stdin
+            docker logout
+            
+            # NCP Container Registry 로그인
+            echo "${{ secrets.NCP_SECRET_KEY }}" | docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u "${{ secrets.NCP_ACCESS_KEY }}" --password-stdin
             
             docker-compose -f docker-compose.yml ps -q > previous_containers.txt
             
@@ -155,7 +182,7 @@ jobs:
             exit 1
           fi
         
-      - name: Send Slack Notification on Success
+      - name: Send Slack Notification on Deployment Success
         if: success()
         uses: 8398a7/action-slack@v3
         with:
@@ -173,7 +200,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           
-      - name: Send Slack Notification on Failure
+      - name: Send Slack Notification on Deployment Failure
         if: failure()
         uses: 8398a7/action-slack@v3
         with:
