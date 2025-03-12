@@ -10,16 +10,6 @@ const nanum_gothic = Nanum_Gothic({
   weight: ['400', '700', '800'],
 });
 
-// const geistSans = Geist({
-//   variable: '--font-geist-sans',
-//   subsets: ['latin'],
-// });
-
-// const geistMono = Geist_Mono({
-//   variable: '--font-geist-mono',
-//   subsets: ['latin'],
-// });
-
 type Props = {
   children: React.ReactNode;
 };

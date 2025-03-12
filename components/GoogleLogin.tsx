@@ -1,47 +1,91 @@
+// components/SocialLogin.tsx
 'use client';
-import React from 'react';
 
-const GoogleLogin = () => {
-  const handleGoogleLogin = () => {
-    try {
-      console.log('구글 로그인 시작...');
-      // 구글 OAuth URL로 리다이렉트
-      const redirectUrl = 'https://dev-api.libri.kr/oauth2/authorization/google';
-      console.log('리다이렉트 URL:', redirectUrl);
-      window.location.href = redirectUrl;
-    } catch (error) {
-      console.error('구글 로그인 중 오류 발생:', error);
-    }
+import React from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
+import { motion } from 'framer-motion';
+
+const SocialLogin = () => {
+  const { data: session } = useSession();
+
+  const handleSignOut = async () => {
+    // 로컬 스토리지 정리
+    localStorage.removeItem('memberInfo');
+    localStorage.removeItem('loginEmail');
+    // NextAuth 로그아웃
+    await signOut({ callbackUrl: '/' });
   };
 
+  if (session?.user) {
+    return (
+      <div className="flex flex-col items-center gap-4">
+        {session.user.image && (
+          <img className="w-8 h-8 rounded-full" src={session.user.image} alt="사용자 프로필" />
+        )}
+        <p className="text-sky-600">{session.user.email}님 환영합니다</p>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center shadow-sm transition-colors"
+          onClick={handleSignOut}
+        >
+          로그아웃
+        </motion.button>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full">
-      <button
-        onClick={handleGoogleLogin}
-        className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 font-semibold p-3 rounded-lg border border-gray-300 hover:bg-gray-100 transition-all duration-300 ease-in-out"
+    <div className="flex flex-col gap-3">
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => signIn('naver', { callbackUrl: '/' })}
+        className="bg-[#03C75A] hover:bg-[#02b351] text-white px-6 py-3 rounded-lg flex items-center gap-2 shadow-sm transition-colors"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path
-            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            d="M11.9934 10.3127L8.01199 4.68945H4.68945V15.3104H8.00659V9.68727L11.9879 15.3104H15.3105V4.68945H11.9934V10.3127Z"
+            fill="currentColor"
+          />
+        </svg>
+        네이버로 로그인
+      </motion.button>
+
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => signIn('google', { callbackUrl: '/' })}
+        className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-lg flex items-center gap-2 shadow-sm transition-colors"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 4.872C14.136 4.872 15.744 5.688 16.848 6.72L20.304 3.264C18.168 1.248 15.432 0 12 0C7.392 0 3.432 2.712 1.38 6.624L5.268 9.648C6.264 6.888 8.904 4.872 12 4.872Z"
+            fill="#EA4335"
+          />
+          <path
+            d="M23.76 12.252C23.76 11.448 23.688 10.68 23.568 9.936H12V14.604H18.72C18.432 16.116 17.592 17.352 16.356 18.192L20.112 21.12C22.38 19.008 23.76 15.936 23.76 12.252Z"
             fill="#4285F4"
           />
           <path
-            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            fill="#34A853"
-          />
-          <path
-            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+            d="M5.28 14.352C5.028 13.62 4.872 12.828 4.872 12C4.872 11.172 5.016 10.38 5.268 9.648L1.38 6.624C0.516 8.28 0 10.08 0 12C0 13.92 0.516 15.72 1.38 17.376L5.28 14.352Z"
             fill="#FBBC05"
           />
           <path
-            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            fill="#EA4335"
+            d="M12 24C15.432 24 18.288 22.908 20.112 21.12L16.356 18.192C15.264 18.948 13.824 19.452 12 19.452C8.904 19.452 6.264 17.436 5.28 14.676L1.392 17.7C3.444 21.6 7.392 24 12 24Z"
+            fill="#34A853"
           />
         </svg>
-        구글 계정으로 로그인
-      </button>
+        구글로 로그인
+      </motion.button>
     </div>
   );
 };
 
-export default GoogleLogin;
+export default SocialLogin;

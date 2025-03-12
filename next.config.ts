@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
         hostname: 'image.aladin.co.kr',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'libri-object-storage.kr.object.ncloudstorage.com',
+        pathname: '**',
+      },
     ],
   },
 
@@ -19,7 +24,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
+
   // 타입 체크 비활성화
   typescript: {
     ignoreBuildErrors: true,

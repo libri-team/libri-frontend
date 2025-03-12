@@ -26,6 +26,11 @@ const storeTokenAndLog = (token: string): string => {
       const payload = JSON.parse(atob(parts[1]));
       console.log('토큰 페이로드:', payload);
 
+      //이메일 정보 로컬스토리지에 저장
+      if (payload.sub) {
+        localStorage.setItem('loginEmail', payload.sub);
+        console.log('이메일 정보 저장:', payload.sub);
+      }
       // Calculate expiration time
       if (payload.exp) {
         const expiryDate = new Date(payload.exp * 1000);
@@ -51,12 +56,14 @@ const storeTokenAndLog = (token: string): string => {
 };
 
 const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
-  const [, setToken] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [, setStoredToken] = useState<string | null>(null);
+
+  // 이메일 관련 상태
+  const [emailId, setEmailId] = useState<string>('');
+  const [emailDomain, setEmailDomain] = useState<string>('@gmail.com');
 
   // Check for token in localStorage on component mount
   useEffect(() => {
@@ -77,14 +84,23 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
   // Generate test token
   const handleGenerateTestToken = async (): Promise<void> => {
     try {
+      // 이메일 ID 체크
+      if (!emailId.trim()) {
+        setError('이메일을 입력해주세요.');
+        return;
+      }
+
+      // 전체 이메일 조합
+      const fullEmail = emailId.trim() + emailDomain;
+
       setLoading(true);
       setError(null);
 
-      console.log(`/auth/test/token API 호출 중 (test_email=${email})...`);
+      console.log(`/auth/test/token API 호출 중 (test_email=${fullEmail})...`);
 
       // Direct API call (may have CORS issues)
       const response = await fetch(
-        `https://dev-api.libri.kr/auth/test/token?test_email=${encodeURIComponent(email)}`,
+        `https://dev-api.libri.kr/auth/test/token?test_email=${encodeURIComponent(fullEmail)}`,
         {
           method: 'GET',
           headers: {
@@ -106,7 +122,7 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
 
         setSuccess(true);
         setStoredToken(cleanToken);
-        setToken(''); // Reset input field
+        setEmailId(''); // Reset input field
 
         // Notify parent component
         if (onTokenSet) {
@@ -129,32 +145,50 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
   };
 
   return (
-    <div className="w-full p-6 ">
-      {/* Test ID generation */}
-      <div className="mb-4">
-        <div className="flex space-x-2">
+    <div className="w-full h-80 flex flex-col justify-center items-center gap-6">
+      <div>
+        {' '}
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">아이디 생성</h2>
+        <p className="text-gray-500 text-sm mb-6 text-center">
+          사용하실 아이디와 이메일을 입력해 주세요.
+        </p>
+      </div>
+
+      {/* 이메일 입력 */}
+      <div className="w-full mb-6">
+        <div className="flex">
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="libri@naver.com"
-            className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            type="text"
+            value={emailId}
+            onChange={(e) => setEmailId(e.target.value)}
+            placeholder="이메일 아이디"
+            className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-green-500"
           />
-          <button
-            onClick={handleGenerateTestToken}
-            disabled={loading || !email.includes('@')}
-            className={`
-    z-30 py-2 px-4 rounded font-medium 
-    ${
-      loading || !email.includes('@')
-        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-        : 'bg-[#215B32] text-white hover:opacity-80' // 불투명도로 호버 효과 대체
-    }`}
+          <select
+            value={emailDomain}
+            onChange={(e) => setEmailDomain(e.target.value)}
+            className="px-3 py-2 border border-gray-300 border-l-0 rounded-r-md bg-white"
           >
-            {loading ? '처리 중...' : '생성'}
-          </button>
+            <option value="@gmail.com">@gmail.com</option>
+            <option value="@naver.com">@naver.com</option>
+          </select>
         </div>
       </div>
+
+      {/* 생성 버튼 */}
+      <button
+        onClick={handleGenerateTestToken}
+        disabled={loading || !emailId.trim()}
+        className={`
+          w-full py-2 px-4 rounded font-medium 
+          ${
+            loading || !emailId.trim()
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-[#215B32] text-white hover:opacity-80'
+          }`}
+      >
+        {loading ? '처리 중...' : '생성'}
+      </button>
 
       {/* Status messages */}
       {error && <div className="mt-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}

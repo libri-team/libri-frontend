@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { format, set } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CirclePlus, Plus, Search, CalendarIcon, X } from 'lucide-react';
-// import Navigation from '@/components/Navigation';
+import { CirclePlus, Plus, Search, CalendarIcon, X, Star, Users } from 'lucide-react';
+import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -29,190 +29,8 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import MemberAddDrawer from '@/components/bookclub/MemberAddDrawer';
 
-import Link from 'next/link';
-
-import { Bell } from 'lucide-react';
-import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { useEffect } from 'react';
-
-interface NavigationProps {
-  isDrawerOpen?: boolean;
-  nickname?: string | null; // 닉네임 prop 추가
-}
-
-const Navigation = ({ isDrawerOpen }: NavigationProps) => {
-  const pathname = usePathname();
-  const [nickname, setNickname] = useState<string | null>(null);
-
-  useEffect(() => {
-    // 로컬 스토리지에서 회원 정보 가져오기
-    const memberInfoString = localStorage.getItem('memberInfo');
-    if (memberInfoString) {
-      const memberInfo = JSON.parse(memberInfoString);
-      setNickname(memberInfo.nickname);
-    }
-  }, []);
-
-  // 독서모임 버튼 클릭 핸들러 추가
-  const handleBookClubClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // 기본 링크 동작 방지
-    alert('독서모임 기능은 추후에 업데이트 예정입니다.');
-  };
-
-  const logoVariants = {
-    initial: { x: -20, opacity: 0 },
-    animate: {
-      x: 0,
-      opacity: 1,
-      transition: { duration: 0.5, delay: 0.2 },
-    },
-  };
-
-  const profileVariants = {
-    initial: { x: 20, opacity: 0 },
-    animate: {
-      x: 0,
-      opacity: 1,
-      transition: { duration: 0.5, delay: 0.2 },
-    },
-  };
-
-  return (
-    <>
-      <motion.nav
-        initial="hidden"
-        animate="visible"
-        className={`fixed top-0 left-0 right-0 w-full flex justify-center px-16 z-50 transition-opacity duration-300 ${
-          isDrawerOpen ? 'opacity-40' : 'opacity-100'
-        }`}
-        style={{ padding: '2.25rem 4rem 0 4rem' }}
-      >
-        <div className="w-full flex justify-between items-center z-50">
-          <motion.div
-            variants={logoVariants}
-            initial="initial"
-            animate="animate"
-            whileHover={{
-              scale: 1.05,
-              transition: { type: 'spring', stiffness: 400 },
-            }}
-          >
-            <Link href="/" className="block">
-              <Image src="/logo.svg" width={110} height={100} alt="logo" />
-            </Link>
-          </motion.div>
-
-          <div className="flex items-center justify-between w-[28rem] h-12">
-            {[
-              { href: '/newbook', label: '신규 책 추가', onClick: undefined },
-              { href: '#', label: '독서 모임', onClick: handleBookClubClick }, // href를 #으로 변경하고 onClick 핸들러 추가
-              { href: '/mylibrary', label: '내 서재', onClick: undefined },
-            ].map((item) => (
-              <motion.div
-                key={item.href}
-                className="relative h-full flex items-center"
-                whileHover="hover"
-              >
-                <Link
-                  href={item.href}
-                  className={`
-                    ${pathname === item.href ? 'text-green-700' : 'text-gray-700'}
-                    text-xl font-semibold hover:text-white no-underline 
-                    transition-all duration-200 relative px-4 py-2 
-                    flex items-center justify-center h-full w-full
-                    overflow-hidden
-                  `}
-                  onClick={item.onClick}
-                >
-                  <motion.span
-                    className="relative z-10"
-                    variants={{
-                      hover: {
-                        y: -2,
-                        transition: { duration: 0.2 },
-                      },
-                    }}
-                  >
-                    {item.label}
-                  </motion.span>
-
-                  <motion.div
-                    className="absolute inset-0 bg-green-700"
-                    variants={{
-                      hover: {
-                        y: 0,
-                        transition: { duration: 0.2 },
-                      },
-                    }}
-                    initial={{ y: '100%' }}
-                  />
-
-                  <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-700"
-                    initial={{ scaleX: 0 }}
-                    animate={{
-                      scaleX: pathname === item.href ? 1 : 0,
-                      transition: { duration: 0.3 },
-                    }}
-                    variants={{
-                      hover: {
-                        scaleX: 1,
-                        transition: { duration: 0.2 },
-                      },
-                    }}
-                    style={{
-                      transformOrigin: 'center',
-                    }}
-                  />
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div
-            className="flex items-center gap-4"
-            variants={profileVariants}
-            initial="initial"
-            animate="animate"
-          >
-            <motion.button
-              className="text-gray-600 cursor-pointer p-2"
-              whileHover={{
-                scale: 1.1,
-                transition: { type: 'spring', stiffness: 400 },
-              }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Bell size={25} />
-            </motion.button>
-
-            <motion.div
-              className="flex items-center gap-2 p-2 rounded-full cursor-pointer"
-              whileHover={{
-                scale: 1.02,
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                transition: { duration: 0.2 },
-              }}
-            >
-              <Image
-                src="/profile.svg"
-                width={40}
-                height={40}
-                className="rounded-full"
-                alt="profile"
-              />
-              <span className="text-gray-700 font-medium">{nickname || 'Profile'}</span>
-            </motion.div>
-          </motion.div>
-        </div>
-      </motion.nav>
-
-      {isDrawerOpen && <div className="fixed top-0 left-0 right-0 h-24 z-40" />}
-    </>
-  );
-};
 // 책 데이터 타입 정의
 interface Book {
   title: string;
@@ -237,15 +55,24 @@ interface ApiBook {
   link?: string;
 }
 
+// 멤버 인터페이스
+interface User {
+  id: number;
+  uniqueId: string;
+  nickname: string;
+}
+
 interface BookSearchDrawerProps {
   isOpen: boolean;
   setIsOpen: (value: boolean) => void;
   onAddBook?: (book: Book) => void;
 }
+
 interface BookDetailCardProps {
   book: Book;
   onClose: () => void;
 }
+
 const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, onAddBook }) => {
   const [hoveredBookIndex, setHoveredBookIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -490,15 +317,16 @@ const BookSearchDrawer: React.FC<BookSearchDrawerProps> = ({ isOpen, setIsOpen, 
     </Drawer>
   );
 };
+
 const BookDetailCard: React.FC<BookDetailCardProps> = ({ book, onClose }) => {
   // Function to handle the "책 소개 보러가기" button click
   const handleViewBookInfo = () => {
     if (book.link) {
       window.open(book.link, '_blank'); // Open link in a new tab
     } else {
-      const searchQuery = book.isbn
+      const searchQuery = book.link
         ? `${book.link}`
-        : `https://search.daum.net/search?w=book&q=${encodeURIComponent(book.title)}`;
+        : `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(book.title)}`;
       window.open(searchQuery, '_blank');
     }
   };
@@ -568,7 +396,9 @@ interface BookSubmitData {
   startDateTime: string | null;
   endDateTime: string | null;
   clubId: null;
+  memberIds: number[];
 }
+
 const submitBook = async (bookData: BookSubmitData) => {
   try {
     const token = localStorage.getItem('accessToken');
@@ -599,9 +429,10 @@ const submitBook = async (bookData: BookSubmitData) => {
     throw error;
   }
 };
-// Modify the NewBookPage component to include the submit functionality
+
+// 메인 컴포넌트
 const NewBookPage = () => {
-  // 기존 상태 유지
+  // 기존 상태
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isOpen, setIsOpen] = useState(false);
@@ -612,7 +443,11 @@ const NewBookPage = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // 날짜 및 시간 선택 컴포넌트 추가
+  // 멤버 관련 상태 추가
+  const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState<boolean>(false);
+  const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
+
+  // 날짜 및 시간 선택 컴포넌트
   const DateTimeSelector = ({
     selectedDateTime,
     onDateTimeChange,
@@ -695,7 +530,7 @@ const NewBookPage = () => {
   type StatusKey = 'ABANDONED' | 'READING' | 'COMPLETED' | 'GAVE_UP';
 
   const handleAddBook = (book: Book) => {
-    console.log('선택된 책:', book); // 전달되는 데이터 확인
+    console.log('선택된 책:', book);
     setSelectedBook(book);
     setIsOpen(false);
   };
@@ -714,10 +549,8 @@ const NewBookPage = () => {
 
   const handleValueChange = (value: string) => {
     if (isValidStatusKey(value)) {
-      // TypeScript now knows this is safe
       setSelectedStatus(value);
     } else {
-      // Handle invalid values gracefully
       console.warn(`Invalid status value received: ${value}`);
       setSelectedStatus('ABANDONED'); // Default to a safe value
     }
@@ -734,13 +567,13 @@ const NewBookPage = () => {
     return styles[status];
   };
 
-  // Function to format date to "YYYY-MM-DD HH:MM:SS"
+  // 날짜를 "YYYY-MM-DD HH:MM:SS" 형식으로 변환
   const formatDateTimeForApi = (date?: Date): string | null => {
     if (!date) return null;
     return format(date, 'yyyy-MM-dd HH:mm:ss');
   };
 
-  // 수정된 handleSubmit 함수
+  // 수정된 handleSubmit 함수 - memberIds 포함
   const handleSubmit = async () => {
     if (!selectedBook) {
       alert('책을 선택해주세요.');
@@ -751,20 +584,21 @@ const NewBookPage = () => {
     setSubmitError(null);
 
     try {
-      // 필드명을 API 요구사항에 맞게 변환
-      const bookData = {
+      // API 요구사항에 맞게 데이터 구성
+      const bookData: BookSubmitData = {
         isbn: selectedBook.isbn || '',
         title: selectedBook.title || '',
         description: selectedBook.description || '',
-        authors: selectedBook.author || '', // author 필드를 authors로 변환
+        authors: selectedBook.author || '',
         publisher: selectedBook.publisher || '',
-        thumbnail: selectedBook.cover || '', // cover 필드를 thumbnail로 변환
+        thumbnail: selectedBook.cover || '',
         link: selectedBook.link || '',
         rating: rating,
         status: selectedStatus,
         startDateTime: formatDateTimeForApi(startDate),
         endDateTime: formatDateTimeForApi(endDate),
         clubId: null,
+        memberIds: selectedMembers.map((member) => member.id),
       };
 
       console.log('전송할 데이터:', bookData);
@@ -777,9 +611,9 @@ const NewBookPage = () => {
         console.log(`북로그가 성공적으로 생성되었습니다. ID: ${result.id}`);
       }
 
-      // 성공 후 리디렉션 또는 초기화
+      // 성공 후 리디렉션
       setTimeout(() => {
-        window.location.href = '/mylibrary'; // 필요한 경로로 조정
+        window.location.href = '/mylibrary';
       }, 1000);
     } catch (error) {
       console.error('북로그 생성 중 오류:', error);
@@ -794,25 +628,25 @@ const NewBookPage = () => {
   return (
     <div
       className={`min-h-screen w-full bg-[#eef0ed] min-w-sm relative transition-all duration-300 ease-in-out flex flex-col ${
-        isOpen ? 'scale-[0.98] rounded-xl overflow-hidden' : 'scale-100'
+        isOpen || isMemberDrawerOpen ? 'scale-[0.98] rounded-xl overflow-hidden' : 'scale-100'
       }`}
     >
-      <Navigation isDrawerOpen={isOpen} />
+      <Navigation isDrawerOpen={isOpen || isMemberDrawerOpen} />
       <div className="absolute top-48 left-0 right-0 z-0 flex justify-center">
         <h1 className="font-playfair text-[17.5rem] font-normal leading-[22.75rem] text-[#183C23] opacity-15 whitespace-nowrap">
           Add New book
         </h1>
       </div>
 
-      <main className="relative z-10 pt-[11.75rem] flex flex-col flex-grow">
+      <main className="relative z-10 pt-[6.5rem] flex flex-col flex-grow">
         <div className="relative text-center mb-[5.25rem]">
           <h2 className="text-[2.375rem] font-semibold text-gray-800">신규 책 추가</h2>
           <p className="text-[1.125rem] text-[#737373]">읽고 싶은, 읽고 있는 또는 다 읽은 책을</p>
         </div>
 
-        <div className="flex-grow flex flex-col  w-full items-center justify-center bg-white  px-[22.69rem] ">
+        <div className="flex-grow flex flex-col w-full items-center justify-center bg-white px-[22.69rem]">
           <div className="flex items-center mb-[5.88rem] gap-10">
-            {/* 왼쪽 컨텐츠 */}
+            {/* 왼쪽 컨텐츠 - 책 정보 */}
             <div>
               <h3 className="text-xl font-medium mb-4">책 정보</h3>
 
@@ -835,14 +669,15 @@ const NewBookPage = () => {
               <BookSearchDrawer isOpen={isOpen} setIsOpen={setIsOpen} onAddBook={handleAddBook} />
             </div>
 
-            {/* 오른쪽 컨텐츠 */}
+            {/* 오른쪽 컨텐츠 - 상태, 날짜, 평점 */}
             <div className="flex flex-col justify-end w-[37.25rem] h-80 mt-auto">
               <div className="flex flex-col gap-6">
+                {/* 상태 선택 */}
                 <div>
                   <div className="flex w-[18rem] px-[0.25rem] py-[0.5rem] justify-between items-center text-lg font-medium">
-                    상태
+                    상태 & 평점
                   </div>
-                  <div>
+                  <div className="flex gap-4">
                     <Select value={selectedStatus} onValueChange={handleValueChange}>
                       <SelectTrigger className="w-72 h-12 border border-gray-200 rounded-lg bg-white hover:bg-gray-50">
                         <SelectValue>
@@ -860,40 +695,61 @@ const NewBookPage = () => {
                         </SelectValue>
                       </SelectTrigger>
 
-                      <SelectContent className="w-72 bg-white border-2  border-[#374151] rounded-lg p-2 shadow-lg">
+                      <SelectContent className="w-72 bg-white border-2 border-[#374151] rounded-lg p-2 shadow-lg">
                         <SelectGroup className="space-y-1">
                           <SelectItem
                             value="ABANDONED"
-                            className={` bg-[#FFF3CD] text-[#997404] hover:bg-[#FFE69C]  rounded-full px-4 py-1 cursor-pointer text-sm font-medium`}
+                            className={`bg-[#FFF3CD] text-[#997404] hover:bg-[#FFE69C] rounded-full px-4 py-1 w-1/3 cursor-pointer text-sm font-medium`}
                           >
                             읽고픈
                           </SelectItem>
 
                           <SelectItem
                             value="READING"
-                            className="rounded-full px-4 py-1  bg-[#D1FAE5] text-green-800 hover:bg-[#A7F3D0] cursor-pointer text-sm font-medium"
+                            className=" rounded-full px-4 py-1 bg-[#D1FAE5] text-green-800 hover:bg-[#A7F3D0] w-1/3 cursor-pointer text-sm font-medium"
                           >
                             읽는중
                           </SelectItem>
 
                           <SelectItem
                             value="COMPLETED"
-                            className="bg-[#DBEAFE] text-blue-800 hover:bg-[#BFDBFE] rounded-full px-4 py-1 cursor-pointer text-sm font-medium"
+                            className="bg-[#DBEAFE] text-blue-800 hover:bg-[#BFDBFE] rounded-full px-4 py-1 w-1/3 cursor-pointer text-sm font-medium"
                           >
                             완독
                           </SelectItem>
                           <SelectItem
                             value="GAVE_UP"
-                            className="bg-[#FFE4E6] text-red-800 hover:bg-[#FECDD3] rounded-full px-4 py-1 cursor-pointer text-sm font-medium"
+                            className="bg-[#FFE4E6] text-red-800 hover:bg-[#FECDD3] rounded-full px-4 py-1  w-1/3 cursor-pointer text-sm font-medium"
                           >
                             포기
                           </SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+
+                    {/* 평점 선택 영역 */}
+                    <div>
+                      <div className="flex items-center gap-4">
+                        <div className="rating rating-lg rating-half flex justify-around items-center w-[11.25rem] h-12 p-[0.625rem] flex-shrink-0 rounded-lg border border-[#D4D4D4]">
+                          <input type="radio" name="rating-10" className="rating-hidden" />
+                          {[...Array(10)].map((_, index) => (
+                            <input
+                              key={index}
+                              type="radio"
+                              name="rating-10"
+                              className={`mask mask-star-2 ${index % 2 === 0 ? 'mask-half-1' : 'mask-half-2'}`}
+                              style={{ backgroundColor: rating > index ? '#FFF598' : '#E5E5E5' }}
+                              checked={rating === index + 1}
+                              onChange={() => handleRatingChange(index + 1)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
+                {/* 날짜 선택 */}
                 <div className="flex w-full">
                   <div className="mr-5">
                     <div className="flex w-[18rem] px-[0.25rem] py-[0.5rem] justify-between items-center text-lg font-medium">
@@ -911,37 +767,59 @@ const NewBookPage = () => {
                     <DateTimeSelector selectedDateTime={endDate} onDateTimeChange={setEndDate} />
                   </div>
                 </div>
+
+                {/* 함께 읽는 멤버 선택 영역 추가 */}
                 <div>
-                  <div className="flex w-[18rem] px-[0.25rem] py-[0.5rem] justify-between items-center text-lg font-medium">
-                    평점
+                  <div className="flex w-full px-[0.25rem] py-[0.5rem] justify-between items-center text-lg font-medium">
+                    함께 읽는 멤버
                   </div>
-                  <div className="rating rating-lg rating-half flex justify-around items-center w-[11.25rem] h-12 p-[0.625rem] flex-shrink-0 rounded-lg border border-[#D4D4D4]">
-                    <input type="radio" name="rating-10" className="rating-hidden" />
-                    {[...Array(10)].map((_, index) => (
-                      <input
-                        key={index}
-                        type="radio"
-                        name="rating-10"
-                        className={`mask mask-star-2 ${index % 2 === 0 ? 'mask-half-1' : 'mask-half-2'}`}
-                        style={{ backgroundColor: rating > index ? '#FFF598' : '#E5E5E5' }}
-                        checked={rating === index + 1}
-                        onChange={() => handleRatingChange(index + 1)}
-                      />
-                    ))}
-                  </div>
+                  <Button
+                    onClick={() => setIsMemberDrawerOpen(true)}
+                    variant={'outline'}
+                    className="flex w-72 h-12 px-4 py-0 justify-start items-center gap-2 self-stretch rounded-lg border border-[#D1D5DB] bg-white hover:bg-gray-50"
+                  >
+                    <Users className="w-5 h-5 text-[#A3A3A3]" />
+                    <span className="text-base text-[#A3A3A3]">
+                      {selectedMembers.length > 0
+                        ? `${selectedMembers.length}명 선택됨`
+                        : '멤버 추가하기'}
+                    </span>
+                  </Button>
+
+                  {/* 선택된 멤버 표시 */}
+                  {selectedMembers.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm"
+                        >
+                          <span>{member.nickname}</span>
+                          <button
+                            onClick={() => {
+                              setSelectedMembers(selectedMembers.filter((m) => m.id !== member.id));
+                            }}
+                            className="ml-2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Status Messages */}
+          {/* 상태 메시지 */}
           {submitError && <div className="text-red-600 mb-4 text-center">{submitError}</div>}
 
           {submitSuccess && (
             <div className="text-green-600 mb-4 text-center">책이 성공적으로 추가되었습니다.</div>
           )}
 
-          {/*  아래 생성하기  */}
+          {/* 생성하기 버튼 */}
           <div className="flex justify-center items-center shrink-0 w-[18.5rem] h-16">
             <Button
               onClick={handleSubmit}
@@ -954,11 +832,19 @@ const NewBookPage = () => {
         </div>
       </main>
 
-      {/* Overlay for drawer */}
+      {/* 드로어용 오버레이 */}
       <div
         className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          isOpen || isMemberDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
+      />
+
+      {/* 멤버 추가 드로어 */}
+      <MemberAddDrawer
+        isOpen={isMemberDrawerOpen}
+        setIsOpen={setIsMemberDrawerOpen}
+        onMembersSelect={setSelectedMembers}
+        selectedMembers={selectedMembers}
       />
     </div>
   );
