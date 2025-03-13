@@ -135,7 +135,6 @@ export default function BookClubPage() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [, setIsTokenExpired] = useState<boolean>(false);
 
   // API에서 클럽 데이터 가져오기
   useEffect(() => {
@@ -248,7 +247,7 @@ export default function BookClubPage() {
         </h1>
       </div>
 
-      <main className="relative z-10 pt-[5.69rem] flex flex-col flex-grow">
+      <main className="relative z-10 pt-[9rem] flex flex-col flex-grow">
         {/* 헤더 영역 */}
         <div className="relative text-center mb-10">
           <h2 className="text-[2.375rem] font-semibold text-gray-800">나의 독서 모임</h2>
@@ -330,7 +329,7 @@ export default function BookClubPage() {
 
           <Link href="/addbookclub" className="mt-[7.37rem] no-underline">
             <div className="flex justify-center items-center shrink-0 w-[18.5rem] h-16">
-              <Button className="flex text-center w-full h-full px-4 py-2 rounded-[10rem] border-[#215B32] border-[2px] text-[#215B32] hover:bg-green-700 hover:text-white bg-white text-xl font-bold">
+              <Button className="flex text-center w-full h-full px-4 py-2 rounded-[10rem] border-[#215B32] border-[2px] text-[#215B32] hover:bg-[#215B32] hover:text-[#ffffff] bg-[#ffffff] text-xl font-bold">
                 <PlusCircle size={28} className="mr-2" /> 새 모임 만들기
               </Button>
             </div>

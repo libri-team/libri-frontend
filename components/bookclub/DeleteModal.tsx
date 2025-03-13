@@ -16,7 +16,7 @@ const DeleteClubModal: React.FC<DeleteClubModalProps> = ({ isOpen, onClose, club
   const [error, setError] = useState<string | null>(null);
 
   // hover 상태 관리를 위한 state
-  const [cancelHovered, setCancelHovered] = useState(false);
+
   const [deleteHovered, setDeleteHovered] = useState(false);
 
   // 토큰 가져오기 함수
@@ -141,20 +141,6 @@ const DeleteClubModal: React.FC<DeleteClubModalProps> = ({ isOpen, onClose, club
           )}
 
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md"
-              style={{
-                backgroundColor: cancelHovered ? '#9CA3AF' : '#F3F4F6',
-                transition: 'background-color 0.2s',
-                cursor: isDeleting ? 'not-allowed' : 'pointer',
-              }}
-              onMouseEnter={() => setCancelHovered(true)}
-              onMouseLeave={() => setCancelHovered(false)}
-              disabled={isDeleting}
-            >
-              관리자 이전
-            </button>
             <button
               onClick={handleDeleteClub}
               className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md"

@@ -155,7 +155,7 @@ const MyLibrary = () => {
         </h1>
       </div>
 
-      <main className="relative z-10 pt-[5rem] flex flex-col flex-grow">
+      <main className="relative z-10 pt-[8rem] flex flex-col flex-grow">
         {/* 헤더 영역 */}
         <div className="relative text-center mb-10">
           <h2 className="text-[2.375rem] font-semibold text-gray-800">내 서재</h2>

@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import React from 'react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { PlusCircle, BookOpen } from 'lucide-react';
+
+import { BookOpen } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import DeleteClubModal from '@/components/bookclub/DeleteModal';
+import AddBookToClub from '@/components/bookclub/AddBookToClub';
+import axios from 'axios';
 
 interface Member {
   id: number;
@@ -29,6 +31,15 @@ interface BookClub {
   fileUrl: string;
   members: Member[];
   rules: Rule[];
+}
+
+interface BookRecord {
+  id: string;
+  title: string;
+  authors: string;
+  publisher: string;
+  thumbnail: string;
+  createId: number;
 }
 
 // 규칙 표시 텍스트 생성
@@ -60,15 +71,23 @@ const BookClubDetail = () => {
   const params = useParams();
   const id = params.id as string;
   const [bookClub, setBookClub] = useState<BookClub | null>(null);
+  const [bookRecords, setBookRecords] = useState<BookRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recordsLoading, setRecordsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const pageSize = 10; // 한 페이지당 항목 수
 
   // 클라이언트 렌더링 확인
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  // 북클럽 정보 불러오기
   useEffect(() => {
     if (!isClient) return;
 
@@ -102,12 +121,85 @@ const BookClubDetail = () => {
     if (id) fetchBookClub();
   }, [id, isClient]);
 
+  // 독서 기록 불러오기
+  const fetchBookRecords = async (status = '') => {
+    if (!isClient || !id) return;
+
+    try {
+      setRecordsLoading(true);
+      const token = localStorage.getItem('accessToken');
+
+      // API 호출을 위한 쿼리 파라미터 생성
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        size: pageSize.toString(),
+        isPrivate: 'false', // 북클럽 조회에는 false로 설정
+        clubId: id,
+      });
+
+      // 상태 필터가 있으면 추가
+      if (status && status !== 'all') {
+        params.append('status', status);
+      }
+
+      const response = await axios.get(`https://dev-api.libri.kr/booklogs?${params.toString()}`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = response.data;
+
+      // 응답 구조에 맞게 수정
+      const recordData = data.logs || [];
+      setBookRecords(recordData);
+      setTotalRecords(data.totalCount || 0);
+      setTotalPages(Math.ceil((data.totalCount || 0) / pageSize));
+
+      console.log('북로그 데이터:', data);
+    } catch (error) {
+      console.error('독서 기록 불러오기 오류:', error);
+      setBookRecords([]);
+    } finally {
+      setRecordsLoading(false);
+    }
+  };
+
+  // 상태 필터 변경 시와 페이지 변경 시 독서 기록 다시 불러오기
+  useEffect(() => {
+    if (isClient && id) {
+      const status = activeFilter === 'all' ? '' : activeFilter;
+      fetchBookRecords(status);
+    }
+  }, [isClient, id, activeFilter, currentPage]);
+
   // 모임 활동/관리자 이전 클릭 핸들러
   const handleManagementClick = () => {
     console.log('모임 활동 버튼 클릭됨');
     setShowDeleteModal(true);
     console.log('모달 상태:', true);
   };
+
+  // 상태 필터 변경 핸들러
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    setCurrentPage(0); // 필터 변경 시 첫 페이지로 돌아감
+  };
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // 책 추가 성공 후 콜백
+  const handleBookAddSuccess = () => {
+    // 독서 기록 다시 불러오기
+    fetchBookRecords(activeFilter === 'all' ? '' : activeFilter);
+  };
+
   if (!isClient || loading)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -240,32 +332,130 @@ const BookClubDetail = () => {
         <div className="mb-8">
           <h2 className="text-lg font-bold mb-2">독서 기록</h2>
           <div className="flex flex-wrap justify-start gap-2 mb-4">
-            <button className="px-4 py-1 rounded-full text-sm bg-green-600 text-white">전체</button>
-            <button className="px-4 py-1 rounded-full text-sm border border-gray-300">리뷰</button>
-            <button className="px-4 py-1 rounded-full text-sm border border-gray-300">
+            <button
+              className={`px-4 py-1 rounded-full text-sm ${activeFilter === 'all' ? 'bg-green-600 text-white' : 'border border-gray-300'}`}
+              onClick={() => handleFilterChange('all')}
+            >
+              전체
+            </button>
+            <button
+              className={`px-4 py-1 rounded-full text-sm ${activeFilter === 'READING' ? 'bg-green-600 text-white' : 'border border-gray-300'}`}
+              onClick={() => handleFilterChange('READING')}
+            >
               읽는 중
             </button>
-            <button className="px-4 py-1 rounded-full text-sm border border-gray-300">완독</button>
-            <button className="px-4 py-1 rounded-full text-sm border border-gray-300">포기</button>
+            <button
+              className={`px-4 py-1 rounded-full text-sm ${activeFilter === 'COMPLETED' ? 'bg-green-600 text-white' : 'border border-gray-300'}`}
+              onClick={() => handleFilterChange('COMPLETED')}
+            >
+              완독
+            </button>
+            <button
+              className={`px-4 py-1 rounded-full text-sm ${activeFilter === 'ABANDONED' ? 'bg-green-600 text-white' : 'border border-gray-300'}`}
+              onClick={() => handleFilterChange('ABANDONED')}
+            >
+              읽고픈
+            </button>
+            <button
+              className={`px-4 py-1 rounded-full text-sm ${activeFilter === 'GAVE_UP' ? 'bg-green-600 text-white' : 'border border-gray-300'}`}
+              onClick={() => handleFilterChange('GAVE_UP')}
+            >
+              포기
+            </button>
           </div>
 
-          <p className="text-sm text-start my-8 text-gray-400">전체 0개</p>
-          <p className="text-center my-16 text-gray-400">독서 기록이 없습니다.</p>
+          <p className="text-sm text-start my-8 text-gray-400">전체 {totalRecords}개</p>
+
+          {recordsLoading ? (
+            <p className="text-center my-16 text-gray-400">로딩 중...</p>
+          ) : bookRecords.length === 0 ? (
+            <p className="text-center my-16 text-gray-400">독서 기록이 없습니다.</p>
+          ) : (
+            <div className="space-y-4">
+              {bookRecords.map((record) => {
+                return (
+                  <div
+                    key={record.id}
+                    className="flex border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex-shrink-0 mr-4">
+                      <Image
+                        src={record.thumbnail || '/next.svg'}
+                        alt={record.title}
+                        width={80}
+                        height={120}
+                        className="w-20 h-30 object-cover rounded"
+                      />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-bold text-lg">{record.title}</h3>
+                        {/* 상태 정보는 API 응답에 없으므로 별도 처리 필요 */}
+                      </div>
+                      <p className="text-sm text-gray-500 mb-2">{record.authors}</p>
+                      <div className="flex items-center text-sm text-gray-500 mb-3">
+                        <span>{record.publisher}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-6 space-x-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === 0
+                        ? 'bg-gray-200 text-gray-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    이전
+                  </button>
+                  <div className="flex items-center space-x-1">
+                    {[...Array(totalPages)].map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handlePageChange(index)}
+                        className={`w-8 h-8 rounded-full ${
+                          currentPage === index
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages - 1}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === totalPages - 1
+                        ? 'bg-gray-200 text-gray-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* 책 추가 버튼 */}
-        <div className="flex justify-center my-8">
-          <Button className="flex bg-[#ffffff] hover:bg-[#215B32] text-center w-[18.5rem] h-[4rem] px-2 py-4 rounded-[10rem] border-[#215B32] border-[2px] text-[#215B32] hover:text-white  text-xl font-bold ">
-            <PlusCircle size={28} className="mr-2" /> 책 추가하기
-          </Button>
-        </div>
+        {/* 책 추가 컴포넌트 */}
+        <AddBookToClub clubId={bookClub.clubId} onAddSuccess={handleBookAddSuccess} />
 
         {/* 모임 활동/관리자 이전 */}
         <div
           className="text-center text-sm text-gray-400 my-8 cursor-pointer hover:text-gray-600 transition-colors"
           onClick={handleManagementClick}
         >
-          모임 활동/관리자 이전
+          모임 삭제
         </div>
 
         {/* 삭제 확인 모달 */}

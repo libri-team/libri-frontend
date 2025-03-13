@@ -162,7 +162,7 @@ const TokenManager: React.FC<TokenManagerProps> = ({ onTokenSet }) => {
             value={emailId}
             onChange={(e) => setEmailId(e.target.value)}
             placeholder="이메일 아이디"
-            className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-green-500"
+            className="flex-grow px-3 bg-white py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-green-500"
           />
           <select
             value={emailDomain}

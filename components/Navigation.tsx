@@ -545,11 +545,11 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
 
     return (
       <div key={notification.inviteId} className="p-6 border-b hover:bg-gray-50">
-        <div className="flex justify-between">
-          <div className="font-medium text-lg">
+        <div className="flex justify-between gap-5">
+          <div className="font-medium text-lg ">
             {isClubInvite ? notification.clubName : notification.bookName}
           </div>
-          <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+          <div className="flex justify-center  items-center text-xs bg-gray-100 text-gray-600 w-32  rounded-full whitespace-pre">
             {isClubInvite ? '북클럽 초대' : '책 함께 읽기'}
           </div>
         </div>
@@ -603,7 +603,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
           <div className="flex items-center justify-between w-[30rem] h-12 ml-32">
             {[
               { href: '/mylibrary', label: '내 서재' },
-              { href: '/bookclub', label: '독서 모임' },
+              { href: '/bookclubmain', label: '독서 모임' },
               { href: '/newbook', label: '신규 책 추가' },
             ].map((item) => (
               <motion.div
@@ -703,7 +703,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg overflow-visible z-50"
+                    className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg  z-100 "
                     style={{
                       width: '500px', // 고정 픽셀 너비 사용
                       maxHeight: '500px',

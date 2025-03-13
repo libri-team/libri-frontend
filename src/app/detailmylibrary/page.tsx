@@ -12,6 +12,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import MemberAddDrawer from '@/components/bookclub/MemberAddDrawer';
 
 // 책 데이터 인터페이스 정의
 interface BookDetail {
@@ -51,6 +52,13 @@ interface ReadingPost {
   modifiedDatetime: string;
   isEditable: boolean;
   fileUrl: string | null;
+}
+
+// User 인터페이스 정의
+interface User {
+  id: number;
+  nickname: string;
+  uniqueId: string;
 }
 
 // 날짜 및 시간 선택 컴포넌트
@@ -98,13 +106,13 @@ const DateTimeSelector = ({
   return (
     <div>
       <div className="text-gray-500 text-sm mb-2">{label}</div>
-      <div className="flex w-72 h-12 items-center border border-gray-200 rounded-lg">
+      <div className="flex w-72 h-12 items-center ">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
-                'justify-start text-left font-normal w-full',
+                'justify-start text-left font-normal w-full bg-white',
                 !selectedDateTime && 'text-muted-foreground',
               )}
             >
@@ -116,7 +124,7 @@ const DateTimeSelector = ({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 m-2 flex flex-col space-y-2">
+          <PopoverContent className="w-auto p-0 m-2 flex flex-col space-y-2 bg-white">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -198,7 +206,6 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
   // 독서 기록 불러오기 함수
   const fetchReadingPosts = async (
     bookLogId: string,
-    readingLogId?: string,
     isTalkingPoint?: boolean,
     sort: 'DESC' | 'ASC' = 'DESC',
     page: number = 0,
@@ -215,10 +222,6 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
       let url = `https://dev-api.libri.kr/reading-posts?page=${page}&bookLogId=${bookLogId}&sort=${sort}`;
 
       // 선택적 파라미터 추가
-      if (readingLogId) {
-        url += `&readingLogId=${readingLogId}`;
-      }
-
       if (isTalkingPoint === true) {
         url += `&isTalkingPoint=${isTalkingPoint}`;
       }
@@ -261,17 +264,11 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
     try {
       console.log('독서 기록 불러오기 시작:', {
         bookLogId: bookData.id,
-        readingLogId: bookData.readingLogId,
         isTalkingPoint: showOnlyTalkingPoints,
         sort: sortOrder,
       });
 
-      const result = await fetchReadingPosts(
-        bookData.id,
-        bookData.readingLogId,
-        showOnlyTalkingPoints,
-        sortOrder,
-      );
+      const result = await fetchReadingPosts(bookData.id, showOnlyTalkingPoints, sortOrder);
 
       console.log('독서 기록 불러오기 결과:', result);
       // 새로운 응답 형식에 맞게 데이터 처리
@@ -288,7 +285,7 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
   useEffect(() => {
     console.log('독서 기록 useEffect 트리거:', bookData?.id, showOnlyTalkingPoints, sortOrder);
     loadReadingPosts();
-  }, [bookData, showOnlyTalkingPoints, sortOrder, bookData?.readingLogId]);
+  }, [bookData, showOnlyTalkingPoints, sortOrder]);
 
   // 독서 기록 저장 함수
   const saveReadingPost = async () => {
@@ -535,12 +532,12 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
               key={post.id}
               className={`bg-white rounded-lg shadow p-4 ${post.isTalkingPoint ? 'border-2 border-[#215B32]' : ''}`}
             >
-              <div className="flex mb-3">
+              <div className="flex mb-3 ">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-lg">{post.isEditable ? nickname : '사용자'}</p>
                   <p className="text-xs text-gray-500">{formatDate(post.createdDatetime)}</p>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-2  ">
                   {post.isTalkingPoint && (
                     <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
                       Talking Point
@@ -598,9 +595,9 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
                     id={`talking-point-${post.id}`}
                     checked={post.isTalkingPoint}
                     onChange={() => toggleTalkingPoint(post.id, post.isTalkingPoint)}
-                    className="mr-2 h-4 w-4 text-[#215B32] focus:ring-[#215B32] rounded"
+                    className="mr-2 h-4 w-4  text-[#215B32] focus:ring-[#215B32] bg-white"
                   />
-                  <label htmlFor={`talking-point-${post.id}`} className="text-sm text-gray-600">
+                  <label htmlFor={`talking-point-${post.id}`} className="text-sm  text-gray-600">
                     Talking Point
                   </label>
                 </div>
@@ -615,7 +612,7 @@ const ReadingPostsSection = ({ bookData }: { bookData: BookDetail }) => {
         <div className="flex items-center">
           <input
             type="text"
-            className="w-full border-none focus:outline-none focus:ring-0 placeholder-gray-400 py-2 px-3"
+            className="w-full bg-white border-none focus:outline-none focus:ring-0 placeholder-gray-400 py-2 px-3"
             placeholder="나의 독서 기록을 작성해 보세요."
             value={newPostContent}
             onChange={(e) => setNewPostContent(e.target.value)}
@@ -647,7 +644,11 @@ const DetailMyLibraryContent = () => {
   const [editStatus, setEditStatus] = useState<string>('');
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [, setMemberIds] = useState<number[]>([]);
+  const [memberIds, setMemberIds] = useState<number[]>([]);
+
+  // 멤버 추가 드로어 상태
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
 
   // 책 데이터 가져오기
   useEffect(() => {
@@ -685,6 +686,33 @@ const DetailMyLibraryContent = () => {
 
     fetchBookDetail();
   }, [bookId]);
+
+  // 멤버 데이터 초기화
+  useEffect(() => {
+    if (bookData) {
+      // 기존 멤버 데이터를 User 형태로 변환
+      const initialMembers: User[] = bookData.members.map((member) => ({
+        id: member.memberId,
+        nickname: member.memberName,
+        uniqueId: `user_${member.memberId}`, // API 형태에 맞게 가상의 uniqueId 생성
+      }));
+      setSelectedMembers(initialMembers);
+    }
+  }, [bookData]);
+
+  // 멤버 선택 처리 함수
+  const handleMembersSelect = (members: User[]) => {
+    setSelectedMembers(members);
+    // memberIds 상태도 업데이트
+    const newMemberIds = members.map((member) => member.id);
+    setMemberIds(newMemberIds);
+  };
+  // 멤버 제거 함수
+  const handleRemoveMember = (memberId: number) => {
+    const updatedMembers = selectedMembers.filter((member) => member.id !== memberId);
+    setSelectedMembers(updatedMembers);
+    setMemberIds(updatedMembers.map((member) => member.id));
+  };
 
   // 날짜 포맷 함수
   const formatDate = (dateTimeString: string) => {
@@ -726,7 +754,16 @@ const DetailMyLibraryContent = () => {
       }
 
       // 멤버 ID 목록 설정
-      setMemberIds(bookData.members.map((member) => member.memberId));
+      const newMemberIds = bookData.members.map((member) => member.memberId);
+      setMemberIds(newMemberIds);
+
+      console.log('편집 모드 진입:', {
+        rating: bookData.rating,
+        status: bookData.status,
+        startDateTime: bookData.startDateTime,
+        endDateTime: bookData.endDateTime,
+        memberIds: newMemberIds,
+      });
     }
 
     setIsEditing(!isEditing);
@@ -753,16 +790,13 @@ const DetailMyLibraryContent = () => {
         return `${year}-${month}-${day} ${hours}:${minutes}:00`;
       };
 
-      // 현재 멤버 ID 목록 추출
-      const memberIds = bookData.members.map((member) => member.memberId);
-
       // API 요청 본문 구성
       const requestBody = {
         rating: editRating,
         status: editStatus || bookData.status,
         startDateTime: formatDateForApi(startDate),
         endDateTime: formatDateForApi(endDate),
-        memberIds: memberIds,
+        memberIds: memberIds, // 선택된 멤버 ID 배열
       };
 
       console.log('책 정보 업데이트 요청:', requestBody);
@@ -796,6 +830,11 @@ const DetailMyLibraryContent = () => {
         status: editStatus || bookData.status,
         startDateTime: formatDateForApi(startDate),
         endDateTime: formatDateForApi(endDate),
+        // 멤버 정보는 서버 응답에서 가져올 수 있지만, 이 예제에서는 간단히 처리
+        members: selectedMembers.map((user) => ({
+          memberId: user.id,
+          memberName: user.nickname,
+        })),
       });
 
       // 편집 모드 종료
@@ -816,7 +855,7 @@ const DetailMyLibraryContent = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#eef0ed] min-w-sm  relative">
+    <div className="min-h-screen w-full bg-[#eef0ed] min-w-sm relative">
       {/* 네비게이션 */}
       <Navigation />
 
@@ -836,7 +875,7 @@ const DetailMyLibraryContent = () => {
             <div className="bg-white flex justify-center rounded-lg shadow-sm p-8 mb-8">
               <div className="flex w-full md:flex-row">
                 {/* 책 이미지 */}
-                <div className="bg-gray-300 rounded-xl p-2 flex justify-center md:justify-center mb-6 md:mb-0">
+                <div className="  p-2 flex justify-center md:justify-center mb-6 md:mb-0">
                   <div className="relative md:w-64 md:h-96 w-48 h-72 overflow-hidden">
                     {bookData.thumbnail ? (
                       <Image
@@ -860,8 +899,8 @@ const DetailMyLibraryContent = () => {
                   {isEditing ? (
                     /* 편집 모드 */
                     <>
-                      <div className="flex items-center mb-2">
-                        <div className="flex space-x-2">
+                      <div className="flex items-center mb-2 ">
+                        <div className="flex space-x-2 mb-2">
                           {['ABANDONED', 'READING', 'COMPLETED', 'GAVE_UP'].map((status) => {
                             const style = getStatusStyle(status);
                             return (
@@ -879,11 +918,14 @@ const DetailMyLibraryContent = () => {
                         </div>
                       </div>
                       <h1 className="text-3xl font-bold text-gray-800 mb-2">{bookData.title}</h1>
-                      <p className="text-gray-600 mb-1">
+                      <p className="text-gray-600 mb-2">
                         {bookData.authors} 저자 · {bookData.publisher} 출판
                       </p>
+                      <p className="text-gray-500 mb-4">
+                        ISBN {bookData.description || '정보 없음'}
+                      </p>
 
-                      <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="flex gap-5 mb-6 ">
                         <DateTimeSelector
                           selectedDateTime={startDate}
                           onDateTimeChange={setStartDate}
@@ -899,17 +941,66 @@ const DetailMyLibraryContent = () => {
                         <RatingInput rating={editRating} setRating={setEditRating} />
                       </div>
 
-                      <p className="text-gray-500 mb-4">ISBN {bookData.isbn || '정보 없음'}</p>
+                      {/* 멤버 ID 선택 영역 */}
+                      <div className="mb-6">
+                        <div className="text-gray-500 text-base mb-2">함께 읽는 멤버</div>
+                        <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-white">
+                          {selectedMembers.map((member) => (
+                            <div
+                              key={member.id}
+                              className="flex items-center bg-green-50 text-green-700 rounded-full px-3 py-1 border border-green-100"
+                            >
+                              <span className="text-sm font-medium">{member.nickname}</span>
+                              <button
+                                className="ml-2 text-red-500 hover:text-red-700"
+                                onClick={() => handleRemoveMember(member.id)}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                          {/* 멤버 추가 버튼 */}
+                          <button
+                            className="flex items-center bg-white text-[#215B32] rounded-full px-3 py-1 border border-dashed border-[#215B32] hover:bg-green-50"
+                            onClick={() => setIsDrawerOpen(true)}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span className="text-sm font-medium">멤버 추가</span>
+                          </button>
+                        </div>
+                      </div>
 
                       <div className="flex space-x-4">
                         <Button
-                          className="bg-[#215B32] hover:bg-[#183c23] text-white"
+                          className="bg-[#215B32] hover:bg-[#183c23] text-white font-medium px-5 py-2 rounded-lg transition-colors duration-200"
                           onClick={saveChanges}
                         >
                           저장하기
                         </Button>
                         <Button
-                          className="border-2 border-[#215B32] bg-white text-[#215B32] hover:bg-gray-100"
+                          className="border-2 border-[#215B32] bg-white text-[#215B32] hover:bg-gray-100 font-medium px-5 py-2 rounded-lg transition-colors duration-200"
                           onClick={toggleEditMode}
                         >
                           취소
@@ -919,12 +1010,18 @@ const DetailMyLibraryContent = () => {
                   ) : (
                     /* 보기 모드 */
                     <>
-                      <div className="flex items-center mb-2">
+                      <div className="flex items-center justify-between mb-2 ">
                         <span
                           className={`px-3 py-1 ${getStatusStyle(bookData.status).bg} ${getStatusStyle(bookData.status).text} text-sm font-medium rounded-full`}
                         >
                           {getStatusStyle(bookData.status).label}
                         </span>
+                        <Button
+                          className="border-2 border-[#215B32] bg-[#ffffff] text-[#215B32] hover:text-[#ffffff] hover:bg-[#215B32] "
+                          onClick={toggleEditMode}
+                        >
+                          책 정보 수정
+                        </Button>
                       </div>
                       <h1 className="text-3xl font-bold text-gray-800 mb-2">{bookData.title}</h1>
                       <p className="text-gray-600 mb-2">
@@ -995,15 +1092,6 @@ const DetailMyLibraryContent = () => {
                           ))}
                         </div>
                       </div>
-
-                      {/* <div className="flex space-x-4">
-                        <Button
-                          className="border-2 border-[#215B32] bg-white text-[#215B32] hover:bg-gray-100"
-                          onClick={toggleEditMode}
-                        >
-                          책 정보 수정
-                        </Button>
-                      </div> */}
                     </>
                   )}
                 </div>
@@ -1012,6 +1100,14 @@ const DetailMyLibraryContent = () => {
 
             {/* 독서 기록 섹션 */}
             {bookData && <ReadingPostsSection bookData={bookData} />}
+
+            {/* 멤버 추가 드로어 */}
+            <MemberAddDrawer
+              isOpen={isDrawerOpen}
+              setIsOpen={setIsDrawerOpen}
+              onMembersSelect={handleMembersSelect}
+              selectedMembers={selectedMembers}
+            />
           </>
         ) : (
           <div className="text-center py-16">

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
@@ -15,17 +15,36 @@ interface NavigationProps {
   nickname?: string | null;
 }
 
-interface Invitation {
-  clubId: number;
-  clubName: string;
+// 새로운 통합 알림 인터페이스
+interface Notification {
+  type: 'CLUB_INVITE' | 'BOOK_LOG_INVITE';
+  inviteId: string;
+  clubId: number | null;
+  clubName: string | null;
+  bookName: string | null;
+  invitor: string;
   sendDateTime: string;
+}
+
+interface NotificationsResponse {
+  notification: Notification[];
+}
+
+// 책 로그 초대 수락 응답 인터페이스
+interface BookLogInviteResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
 }
 
 const Navigation = ({ isDrawerOpen }: NavigationProps) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [nickname, setNickname] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -35,77 +54,102 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
     setIsAnimationReady(true);
   }, []);
 
+  useEffect(() => {
+    console.log('로딩 상태 변경:', isLoading);
+    console.log('알림 데이터:', notifications);
+  }, [isLoading, notifications]);
+
   // 로컬 스토리지에서 정보 가져오기
   useEffect(() => {
     // 로컬 스토리지에서 회원 정보 가져오기
     const memberInfoString = localStorage.getItem('memberInfo');
+    const token = localStorage.getItem('accessToken');
+
     if (memberInfoString) {
-      const memberInfo = JSON.parse(memberInfoString);
-      setNickname(memberInfo.nickname);
+      try {
+        const memberInfo = JSON.parse(memberInfoString);
+        setNickname(memberInfo.nickname);
+        setIsLoggedIn(true);
+      } catch (e) {
+        console.error('memberInfo 파싱 오류:', e);
+        setIsLoggedIn(false);
+      }
+    } else if (token) {
+      // 토큰은 있지만 회원 정보가 없는 경우
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
     }
   }, []);
 
-  // 토큰 가져오기 함수
-  const getTokenFromStorage = (): string | null => {
-    // 로컬 스토리지 검사
-    console.log('로컬 스토리지 키 목록:', Object.keys(localStorage));
-
-    // 로컬 스토리지에서 직접 액세스 토큰 찾기
-    let token = null;
-
-    // 가능한 토큰 키 이름들
-    const possibleKeys = [
-      'token',
-      'access_token',
-      'accessToken',
-      'jwtToken',
-      'jwt',
-      'authToken',
-      'bearerToken',
-    ];
-
-    // 로컬 스토리지에서 토큰 찾기
-    for (const key of possibleKeys) {
-      const value = localStorage.getItem(key);
-      if (value) {
-        console.log(`토큰을 찾았습니다. 키: ${key}`);
-        try {
-          // JSON 형식인지 시도
-          const parsed = JSON.parse(value);
-          // 객체인 경우 토큰 필드 찾기
-          if (typeof parsed === 'object' && parsed !== null) {
-            token = parsed.token || parsed.access_token || parsed.jwt || parsed;
-          } else {
-            token = parsed;
-          }
-        } catch {
-          token = value;
-        }
-        break;
-      }
+  // 로그인 상태일 때만 알림 정보 확인
+  useEffect(() => {
+    if (isLoggedIn) {
+      checkForNotifications();
     }
+  }, [isLoggedIn]);
 
-    if (!token) {
-      // memberInfo 객체 내부에 토큰이 있는지 확인
-      const memberInfoString = localStorage.getItem('memberInfo');
-      if (memberInfoString) {
-        try {
-          const memberInfo = JSON.parse(memberInfoString);
-          token = memberInfo.token || memberInfo.access_token || memberInfo.jwt;
-          if (token) {
-            console.log('memberInfo에서 토큰을 찾았습니다.');
-          }
-        } catch (e) {
-          console.error('memberInfo 파싱 오류:', e);
-        }
-      }
-    }
-
-    return token;
+  // 프로필 클릭 핸들러
+  const handleProfileClick = () => {
+    router.push('/login');
   };
 
-  // API에서 초대 정보 가져오기
-  const fetchInvitations = async () => {
+  // 토큰 가져오기 함수
+  const getTokenFromStorage = (): string | null => {
+    // 먼저 accessToken에서 직접 가져오기
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) return accessToken;
+
+    // 찾지 못한 경우 memberInfo에서 시도
+    const memberInfoString = localStorage.getItem('memberInfo');
+    if (memberInfoString) {
+      try {
+        const memberInfo = JSON.parse(memberInfoString);
+        return memberInfo.token || memberInfo.accessToken;
+      } catch (e) {
+        console.error('memberInfo 파싱 오류:', e);
+      }
+    }
+
+    return null;
+  };
+
+  // 알림이 있는지 확인하는 함수 (빨간 점 표시용)
+  const checkForNotifications = async () => {
+    try {
+      const token = getTokenFromStorage();
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch('https://dev-api.libri.kr/notification/invites', {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data: NotificationsResponse = await response.json();
+
+      if (data && Array.isArray(data.notification) && data.notification.length > 0) {
+        setHasUnreadNotifications(true);
+      } else {
+        setHasUnreadNotifications(false);
+      }
+    } catch (err) {
+      console.error('알림 확인 오류:', err);
+    }
+  };
+
+  // 새로운 API에서 알림 정보 가져오기
+  const fetchNotifications = async () => {
+    console.log('fetchNotifications 시작');
     setIsLoading(true);
     setError(null);
 
@@ -122,8 +166,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
         typeof token === 'string' ? token.substring(0, 15) + '...' : 'not a string',
       );
 
-      // API 요청
-      const response = await fetch('https://dev-api.libri.kr/club/invite', {
+      const response = await fetch('https://dev-api.libri.kr/notification/invites', {
         method: 'GET',
         headers: {
           accept: 'application/json',
@@ -135,28 +178,47 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
         throw new Error(`API 오류: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('받은 초대 데이터:', data);
-      setInvitations(data);
+      const data: NotificationsResponse = await response.json();
+      console.log('받은 알림 데이터:', data);
+
+      if (data && Array.isArray(data.notification)) {
+        setNotifications(data.notification);
+        // 알림을 확인하면 빨간 점 표시 제거
+        if (data.notification.length > 0) {
+          setHasUnreadNotifications(false);
+        }
+      } else {
+        console.error('유효하지 않은 알림 데이터 형식:', data);
+        setNotifications([]);
+      }
     } catch (err: unknown) {
-      console.error('초대 목록 가져오기 실패:', err);
+      console.error('알림 목록 가져오기 실패:', err);
 
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다';
 
-      setError(errorMessage || '초대 정보를 불러오는데 실패했습니다');
+      setError(errorMessage || '알림 정보를 불러오는데 실패했습니다');
+    } finally {
+      console.log('로딩 상태를 false로 설정');
+      setIsLoading(false);
     }
   };
 
-  // 알림 아이콘 클릭 시 초대 정보 가져오기
+  // 알림 아이콘 클릭 시 알림 정보 가져오기
   const handleNotificationClick = () => {
+    // 로그인 상태가 아니면 로그인 페이지로 리다이렉트
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+
     setShowNotifications(!showNotifications);
     if (!showNotifications) {
-      fetchInvitations();
+      fetchNotifications();
     }
   };
 
-  // 초대 수락 처리
-  const handleAcceptInvitation = async (clubId: number) => {
+  // 북클럽 초대 수락 처리
+  const handleAcceptClubInvitation = async (clubId: number, inviteId: string) => {
     try {
       const token = getTokenFromStorage();
 
@@ -164,7 +226,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
         throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
       }
 
-      // PUT 메서드 사용 - curl 명령에 맞춤
+      // PUT 메서드 사용
       const response = await fetch(`https://dev-api.libri.kr/club/invite`, {
         method: 'PUT',
         headers: {
@@ -193,8 +255,8 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
       }
 
       // 성공적으로 수락했다면 목록에서 제거
-      setInvitations(invitations.filter((inv) => inv.clubId !== clubId));
-      alert('초대를 수락했습니다.');
+      setNotifications(notifications.filter((notif) => notif.inviteId !== inviteId));
+      alert('북클럽 초대를 수락했습니다.');
     } catch (err: unknown) {
       console.error('초대 수락 실패:', err);
 
@@ -204,8 +266,8 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
     }
   };
 
-  // 초대 거부 처리
-  const handleRejectInvitation = async (clubId: number) => {
+  // 북클럽 초대 거부 처리
+  const handleRejectClubInvitation = async (clubId: number, inviteId: string) => {
     try {
       const token = getTokenFromStorage();
 
@@ -213,7 +275,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
         throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
       }
 
-      // PUT 메서드 사용 - curl 명령에 맞춤
+      // PUT 메서드 사용
       const response = await fetch(`https://dev-api.libri.kr/club/invite`, {
         method: 'PUT',
         headers: {
@@ -242,14 +304,195 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
       }
 
       // 성공적으로 거부했다면 목록에서 제거
-      setInvitations(invitations.filter((inv) => inv.clubId !== clubId));
-      alert('초대를 거부했습니다.');
+      setNotifications(notifications.filter((notif) => notif.inviteId !== inviteId));
+      alert('북클럽 초대를 거부했습니다.');
     } catch (err: unknown) {
       console.error('초대 거부 실패:', err);
 
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다';
 
       alert(`초대 거부에 실패했습니다: ${errorMessage}`);
+    }
+  };
+
+  // 책 로그 초대 수락 처리 함수
+  const handleAcceptBookLogInvitation = async (
+    inviteId: string,
+    onSuccess?: () => void,
+    onError?: (error: string) => void,
+  ): Promise<void> => {
+    try {
+      // 인증 토큰 검증
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+      }
+
+      // API 요청 옵션 구성
+      const requestOptions: RequestInit = {
+        method: 'PUT',
+        headers: {
+          accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inviteId: inviteId,
+          isApproval: true, // 명시적으로 승인 상태 추가
+        }),
+      };
+
+      // API 엔드포인트 URL 생성
+      const apiUrl = `https://dev-api.libri.kr/booklog-invites/${inviteId}/approval`;
+
+      // API 호출
+      const response = await fetch(apiUrl, requestOptions);
+
+      // 응답 본문 파싱
+      const responseData: BookLogInviteResponse = await response.json();
+
+      // 응답 상태 확인
+      if (!response.ok) {
+        // 오류 로깅
+        console.error('책 로그 초대 수락 요청 실패:', {
+          status: response.status,
+          error: responseData.error || '알 수 없는 오류가 발생했습니다.',
+        });
+
+        // 오류 콜백 호출 또는 기본 오류 처리
+        const errorMessage = responseData.error || `API 오류: ${response.status}`;
+
+        if (onError) {
+          onError(errorMessage);
+        } else {
+          alert(`초대 수락에 실패했습니다: ${errorMessage}`);
+        }
+
+        return;
+      }
+
+      // 성공적인 초대 수락 처리
+      console.log('책 로그 초대 수락 성공:', responseData.message);
+
+      // 알림 목록에서 해당 알림 제거
+      setNotifications(notifications.filter((notif) => notif.inviteId !== inviteId));
+
+      // 성공 콜백 호출 또는 기본 성공 처리
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        alert('책 함께 읽기 초대를 수락했습니다.');
+      }
+    } catch (err: unknown) {
+      // 네트워크 오류 등 예외 처리
+      console.error('책 로그 초대 수락 중 예외 발생:', err);
+
+      const errorMessage =
+        err instanceof Error ? err.message : '네트워크 오류로 초대 수락에 실패했습니다.';
+
+      alert(errorMessage);
+    }
+  };
+
+  // 책 로그 초대 거절 응답 인터페이스
+  interface BookLogInviteRejectionResponse {
+    success: boolean;
+    message?: string;
+    error?: string;
+  }
+
+  // 책 로그 초대 거절 처리 함수
+  const handleRejectBookLogInvitation = async (
+    inviteId: string,
+    onSuccess?: () => void,
+    onError?: (error: string) => void,
+  ): Promise<void> => {
+    try {
+      // 인증 토큰 검증
+      const token = getTokenFromStorage();
+      if (!token) {
+        throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+      }
+
+      // API 요청 옵션 구성
+      const requestOptions: RequestInit = {
+        method: 'PUT', // 메서드를 PUT으로 변경
+        headers: {
+          accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inviteId: inviteId,
+          isApproval: false, // 명시적으로 거절 상태 추가
+        }),
+      };
+
+      // API 엔드포인트 URL 생성
+      const apiUrl = `https://dev-api.libri.kr/booklog-invites/${inviteId}/rejection`;
+
+      // API 호출
+      const response = await fetch(apiUrl, requestOptions);
+
+      // 응답 본문 파싱
+      const responseData: BookLogInviteRejectionResponse = await response.json();
+
+      // 응답 상태 확인
+      if (!response.ok) {
+        // 오류 로깅
+        console.error('책 로그 초대 거절 요청 실패:', {
+          status: response.status,
+          error: responseData.error || '알 수 없는 오류가 발생했습니다.',
+        });
+
+        // 오류 콜백 호출 또는 기본 오류 처리
+        const errorMessage = responseData.error || `API 오류: ${response.status}`;
+
+        if (onError) {
+          onError(errorMessage);
+        } else {
+          alert(`초대 거절에 실패했습니다: ${errorMessage}`);
+        }
+
+        return;
+      }
+
+      // 성공적인 초대 거절 처리
+      console.log('책 로그 초대 거절 성공:', responseData.message);
+
+      // 알림 목록에서 해당 알림 제거
+      setNotifications(notifications.filter((notif) => notif.inviteId !== inviteId));
+
+      // 성공 콜백 호출 또는 기본 성공 처리
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        alert('책 함께 읽기 초대를 거절했습니다.');
+      }
+    } catch (err: unknown) {
+      // 네트워크 오류 등 예외 처리
+      console.error('책 로그 초대 거절 중 예외 발생:', err);
+
+      const errorMessage =
+        err instanceof Error ? err.message : '네트워크 오류로 초대 거절에 실패했습니다.';
+
+      alert(errorMessage);
+    }
+  };
+  // 알림 처리 함수
+  const handleAcceptInvitation = (notification: Notification) => {
+    if (notification.type === 'CLUB_INVITE' && notification.clubId) {
+      handleAcceptClubInvitation(notification.clubId, notification.inviteId);
+    } else if (notification.type === 'BOOK_LOG_INVITE') {
+      handleAcceptBookLogInvitation(notification.inviteId);
+    }
+  };
+
+  const handleRejectInvitation = (notification: Notification) => {
+    if (notification.type === 'CLUB_INVITE' && notification.clubId) {
+      handleRejectClubInvitation(notification.clubId, notification.inviteId);
+    } else if (notification.type === 'BOOK_LOG_INVITE') {
+      handleRejectBookLogInvitation(notification.inviteId);
     }
   };
 
@@ -297,6 +540,42 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
     }
   };
 
+  // 알림 아이템 렌더링 함수
+  const renderNotificationItem = (notification: Notification) => {
+    const isClubInvite = notification.type === 'CLUB_INVITE';
+
+    return (
+      <div key={notification.inviteId} className="p-6 border-b hover:bg-gray-50">
+        <div className="flex justify-between gap-5">
+          <div className="font-medium text-lg ">
+            {isClubInvite ? notification.clubName : notification.bookName}
+          </div>
+          <div className="flex justify-center  items-center text-xs bg-gray-100 text-gray-600 w-32  rounded-full whitespace-pre">
+            {isClubInvite ? '북클럽 초대' : '책 함께 읽기'}
+          </div>
+        </div>
+        <div className="text-sm text-gray-500 mt-1">
+          <span className="font-medium">{notification.invitor}</span>님의 초대
+        </div>
+        <div className="text-xs text-gray-400 mt-1">{formatDate(notification.sendDateTime)}</div>
+        <div className="mt-4 flex space-x-3">
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+            onClick={() => handleAcceptInvitation(notification)}
+          >
+            수락
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
+            onClick={() => handleRejectInvitation(notification)}
+          >
+            거부
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <motion.nav
@@ -325,8 +604,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
           <div className="flex items-center justify-between w-[30rem] h-12 ml-32">
             {[
               { href: '/mylibrary', label: '내 서재' },
-              { href: '/bookclub', label: '독서 모임' },
-
+              { href: '/bookclubmain', label: '독서 모임' },
               { href: '/newbook', label: '신규 책 추가' },
             ].map((item) => (
               <motion.div
@@ -407,10 +685,15 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                 onClick={handleNotificationClick}
               >
                 <Bell size={25} />
-                {invitations.length > 0 && (
+                {/* 알림 카운트 배지 */}
+                {isLoggedIn && notifications.length > 0 && (
                   <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                    {invitations.length}
+                    {notifications.length}
                   </span>
+                )}
+                {/* 알림이 있을 때 표시할 빨간 점 */}
+                {isLoggedIn && hasUnreadNotifications && (
+                  <span className="absolute top-0 right-0 flex h-3 w-3 rounded-full bg-red-500"></span>
                 )}
               </motion.button>
 
@@ -421,7 +704,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg overflow-visible z-50"
+                    className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg  z-100 "
                     style={{
                       width: '500px', // 고정 픽셀 너비 사용
                       maxHeight: '500px',
@@ -437,40 +720,19 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                         <div className="inline-block animate-spin h-8 w-8 border-t-2 border-b-2 border-green-700 rounded-full"></div>
                       </div>
                     ) : error ? (
-                      <div className="p-6 text-red-500 text-center">{error}</div>
-                    ) : invitations.length === 0 ? (
-                      <div className="p-6 text-center text-gray-500">새로운 초대가 없습니다.</div>
+                      <div className="p-6 text-red-500 text-center">로그인 해주세요</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-6 text-center text-gray-500">새로운 알림이 없습니다.</div>
                     ) : (
-                      invitations.map((invitation) => (
-                        <div key={invitation.clubId} className="p-6 border-b hover:bg-gray-50">
-                          <div className="font-medium text-lg">{invitation.clubName}</div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {formatDate(invitation.sendDateTime)}
-                          </div>
-                          <div className="mt-4 flex space-x-3">
-                            <button
-                              className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-                              onClick={() => handleAcceptInvitation(invitation.clubId)}
-                            >
-                              수락
-                            </button>
-                            <button
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
-                              onClick={() => handleRejectInvitation(invitation.clubId)}
-                            >
-                              거부
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                      notifications.map((notification) => renderNotificationItem(notification))
                     )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* 프로필 영역 */}
-            <Link className="no-underline" href={nickname ? '' : '/login'}>
+            {/* 프로필 영역 - 클릭하면 로그인 페이지로 이동 */}
+            <div onClick={handleProfileClick}>
               <motion.div
                 className="flex items-center gap-2 p-2 rounded-full cursor-pointer"
                 whileHover={{
@@ -488,7 +750,7 @@ const Navigation = ({ isDrawerOpen }: NavigationProps) => {
                 />
                 <span className="text-gray-700 font-medium ml-3">{nickname || '로그인'}</span>
               </motion.div>
-            </Link>
+            </div>
           </motion.div>
         </div>
       </motion.nav>
@@ -529,23 +791,26 @@ const HomePage: React.FC = () => {
               <p className="text-[#A3A3A3] text-xl font-semibold  mb-8">
                 책으로 연결되는 순간, 독서 모임을 만들어보세요
               </p>
-              <button className="flex items-center bg-[#215B32] hover:bg-[#194828] text-white px-6 py-3 rounded-full transition-colors">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                  />
-                </svg>
-                독서 모임 만들기
-              </button>
+
+              <Link href="/bookclub" className="no-underline">
+                <button className="flex items-center bg-[#215B32] hover:bg-[#194828] text-white px-6 py-3 rounded-full transition-colors">
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
+                  </svg>
+                  독서 모임 만들기
+                </button>
+              </Link>
             </div>
           </section>
           {/* 여기에 추가 콘텐츠 섹션을 넣을 수 있습니다 */}

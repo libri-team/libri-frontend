@@ -176,21 +176,24 @@ const NewBookClubPage = () => {
 
   return (
     <div
-      className={`min-h-screen w-full bg-[#eef0ed] min-w-sm relative transition-all duration-300 ease-in-out flex flex-col ${
+      className={` w-full bg-[#eef0ed] min-w-sm relative transition-all duration-300 ease-in-out flex flex-col ${
         isPageOpen ? 'scale-[0.98] rounded-xl overflow-hidden' : 'scale-100'
       }`}
     >
       <Navigation isDrawerOpen={isPageOpen} />
+      {/* 백그라운드 텍스트 */}
       <div className="absolute top-48 left-0 right-0 z-0 flex justify-center">
         <h1 className="font-playfair text-[17.5rem] font-normal leading-[22.75rem] text-[#183C23] opacity-15 whitespace-nowrap">
           Book Club
         </h1>
       </div>
-
-      <main className="relative z-10 pt-[11.75rem] flex flex-col flex-grow">
-        <div className="relative text-center mb-[5.25rem]">
+      <main className="relative z-10 pt-[9rem] flex flex-col flex-grow">
+        {/* 헤더 영역 */}
+        <div className="relative text-center mb-10">
           <h2 className="text-[2.375rem] font-semibold text-gray-800">신규 모임 생성</h2>
-          <p className="text-[1.125rem] text-[#737373]">모임 정보를 입력해주세요</p>
+          <p className="text-[1.125rem] text-[#737373] mt-2">
+            같이 읽는 즐거움, 더 오래 기억되는 이야기
+          </p>
         </div>
 
         <div className="flex-grow flex flex-col w-full items-center justify-center bg-white px-20 pt-[3.5rem] pb-28">
@@ -202,7 +205,7 @@ const NewBookClubPage = () => {
                 </div>
                 <Input
                   placeholder="모임명"
-                  className="flex h-12 px-4 py-0 items-center gap-2 self-stretch rounded-lg border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  className="flex h-12 px-4 py-0 items-center gap-2 self-stretch rounded-lg border bg-white border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
                   value={clubName}
                   onChange={(e) => setClubName(e.target.value)}
                 />
@@ -281,7 +284,7 @@ const NewBookClubPage = () => {
                             onChange={(e) =>
                               handleRuleChange(index, 'dateCount', parseInt(e.target.value) || 1)
                             }
-                            className="w-16 text-center border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                            className="w-16 text-center bg-white border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
                             placeholder="1"
                           />
 
@@ -328,7 +331,7 @@ const NewBookClubPage = () => {
                             onChange={(e) =>
                               handleRuleChange(index, 'bookCount', parseInt(e.target.value) || 1)
                             }
-                            className="w-16 text-center border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                            className="w-16 bg-white text-center border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
                             placeholder="1"
                           />
 
@@ -341,7 +344,7 @@ const NewBookClubPage = () => {
                         <Input
                           value={rule.rule}
                           onChange={(e) => handleRuleChange(index, 'rule', e.target.value)}
-                          className="w-full border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          className="w-full bg-white border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500"
                           placeholder="예) 매주 일요일 저녁 8시에 온라인으로 모여 토론합니다"
                         />
                       </div>

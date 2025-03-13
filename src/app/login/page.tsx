@@ -286,7 +286,7 @@ export default function Home() {
   // 신규 책 추가 페이지로 이동
   const handleNavigateToNewBook = () => {
     console.log('신규 책 추가 페이지로 이동합니다.');
-    window.location.href = '/newbook';
+    window.location.href = '/mylibrary';
   };
 
   return (
@@ -450,7 +450,9 @@ export default function Home() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">인증 완료</h2>
+                <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+                  로그인 완료
+                </h2>
 
                 <div className="text-center mb-6">
                   {/* 이메일 정보 추가 */}
@@ -485,7 +487,7 @@ export default function Home() {
                     onClick={handleNavigateToNewBook}
                     className="w-full py-2 bg-green-800 text-white rounded-md hover:bg-green-900 transition-colors"
                   >
-                    책 추가하러가기
+                    내 서재가기
                   </button>
 
                   <button
