@@ -716,7 +716,7 @@ const AddBookToClub: React.FC<AddBookToClubProps> = ({ clubId, onAddSuccess }) =
 
         // 생성된 북로그 페이지로 이동
         setTimeout(() => {
-          router.push(`/bookclub/${result.id}`);
+          window.location.reload();
         }, 1000);
       }
     } catch (error) {
